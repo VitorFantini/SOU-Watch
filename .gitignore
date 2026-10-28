@@ -44,3 +44,8 @@ local.properties
 .env
 .env.*
 keystore.properties
+
+# Materiais mantidos somente no computador
+/monitoramento/
+/CHANGELOG.md
+/RECUPERACAO.md

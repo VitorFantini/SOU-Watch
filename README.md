@@ -6,7 +6,7 @@ Projeto de TCC de Vitor Fantini. A versão atual é **1.4.7** (`versionCode 12`)
 
 > Projeto acadêmico independente. O SOU Watch não é o aplicativo oficial SOU. Os horários e as posições dependem dos dados disponibilizados pela operadora; os minutos exibidos são estimativas calculadas pelo projeto.
 
-[O que mudou](CHANGELOG.md) · [Monitoramento](monitoramento/README.md) · [Histórico da recuperação](RECUPERACAO.md) · [Versões e downloads](https://github.com/VitorFantini/SOU-Watch/releases)
+[Baixar APK 1.4.7](https://github.com/VitorFantini/SOU-Watch/releases/download/v1.4.7/SouWatch-1.4.7.apk) · [Versões e downloads](https://github.com/VitorFantini/SOU-Watch/releases)
 
 ## Conheça o aplicativo
 
@@ -53,7 +53,7 @@ A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medi
 - Interface verificada no emulador Galaxy Watch 7 de 480 × 480. Isso não garante teste em todos os modelos.
 - Aplicativo instalado diretamente no relógio; não há app complementar de celular neste projeto.
 
-O arquivo instalável desta versão é **`SouWatch-1.4.7.apk`**. Quando uma versão for publicada no GitHub, os arquivos para baixar ficarão em [Releases](https://github.com/VitorFantini/SOU-Watch/releases). Também é possível gerar o APK pelos fontes, conforme a próxima seção.
+O arquivo instalável desta versão é **`SouWatch-1.4.7.apk`**. Baixe o APK em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Também é possível gerar o APK pelos fontes, conforme a próxima seção.
 
 O APK preparado para testes usa a variante **debug**, assinada com a chave de desenvolvimento deste computador. A chave privada não faz parte do repositório. Compilações em outros computadores podem ter assinatura diferente e não permitir atualização sobre uma instalação existente.
 
@@ -87,14 +87,10 @@ Use um emulador separado para os testes instrumentados: a instalação/limpeza r
 app/src/main/             Aplicativo Android/Wear OS, interface e Tile
 app/src/test/             Testes unitários
 app/src/androidTest/      Testes Android do Tile
-monitoramento/            Coleta da API e relatórios de validação
 docs/imagens/             Capturas da interface
-CHANGELOG.md              Mudanças registradas por versão
 ```
 
-O monitor opcional acompanha as três linhas e registra evidências para o TCC. Precisa de um computador ligado e conectado; ele não é executado dentro do relógio. Consulte o [guia do monitor](monitoramento/README.md) para iniciar, parar e interpretar os resultados.
-
-Backups de recuperação, APKs gerados, respostas brutas, configurações locais e chaves de assinatura ficam fora do controle de versão. O [registro da recuperação](RECUPERACAO.md) documenta a origem da base reconstruída; os arquivos citados nesse registro podem existir apenas no backup local.
+APKs gerados, configurações locais e chaves de assinatura ficam fora do controle de versão. Os APKs para instalação são distribuídos por GitHub Releases.
 
 ## Como instalar no seu smartwatch
 
