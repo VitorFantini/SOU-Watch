@@ -29,6 +29,9 @@ data class BusUiState(
     val veiculoMaisProximo: BusVehicle? = null, val distanciaAtePonto: String = "--",
     val tempoEstimado: String = "--", val status: String = "Escolha sua linha",
     val isErro: Boolean = false, val mapsRouteUrl: String? = null,
+    val mapaAcompanhamento: TileMapa? = null,
+    val metrosRestantes: Double? = null,
+    val gpsValidoAte: Instant? = null,
     val statusAproximacao: StatusAproximacao = StatusAproximacao.ANALISANDO
 )
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -44,7 +47,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun definirVisivel(valor: Boolean) {
         if(visivel==valor) return
         visivel=valor; trabalho?.cancel()
-        if(valor) retomar() else uiState=uiState.copy(minutosPorPonto=emptyMap(),previsoesValidasAte=null)
+        if(valor) retomar() else uiState=uiState.copy(minutosPorPonto=emptyMap(),previsoesValidasAte=null,
+            gpsValidoAte=null,veiculoMaisProximo=null,mapaAcompanhamento=uiState.mapaAcompanhamento?.copy(onibus=null))
     }
     private fun retomar() {
         trabalho?.cancel()
@@ -154,7 +158,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
     fun selecionarPonto(ponto: BusStop) {
         trabalho?.cancel(); observador=ObservadorPassagem()
-        uiState=uiState.copy(pontoSelecionado=ponto,veiculoMaisProximo=null,mapsRouteUrl=null,status="Localizando ônibus...",statusAproximacao=StatusAproximacao.ANALISANDO)
+        uiState=uiState.copy(pontoSelecionado=ponto,veiculoMaisProximo=null,mapsRouteUrl=null,status="Localizando ônibus...",statusAproximacao=StatusAproximacao.ANALISANDO,
+            metrosRestantes=null,gpsValidoAte=null,mapaAcompanhamento=viagemAtual?.detalhes?.let { TileMapa(it.shape,it.stops) })
         retomar()
     }
     private fun rastrear() {
@@ -166,6 +171,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val viagem=viagemAtual ?: BusRepository.confirmarViagem(linha.id,sentido,h).also { viagemAtual=it }
                     require(viagem.data==LocalDate.now(RastreamentoCorreto.fuso)) { "O dia mudou. Selecione o horário novamente" }
                     require(RastreamentoCorreto.atendePonto(viagem.detalhes,ponto)) { "Esta viagem não atende o ponto" }
+                    if(uiState.mapaAcompanhamento==null) uiState=uiState.copy(mapaAcompanhamento=TileMapa(viagem.detalhes.shape,viagem.detalhes.stops))
                     val bus=BusRepository.buscarVeiculoCorreto(viagem,veiculoIdFixado)
                     val agora=Instant.now()
                     if(bus==null) semPrevisao(if(veiculoIdFixado==null) "Nenhum ônibus informado para esta saída" else "Ônibus $veiculoIdFixado sem sinal; aguardando o mesmo veículo")
@@ -184,7 +190,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                             }
                             val metros=pos?.restante?.let { abs(it) } ?: RastreamentoCorreto.distancia(bus.lat,bus.lng,ponto.lat,ponto.lng)
                             val tempo=if(pos!=null && pos.restante< -80) "após seu ponto" else "~${max(1,ceil(metros/300).toInt())} min · ${if(pos==null) "linha reta" else "estimado"}"
-                            uiState=uiState.copy(veiculoMaisProximo=bus,distanciaAtePonto=if(metros>=1000) "%.1f km".format(metros/1000) else "${metros.toInt()} m",tempoEstimado=tempo,status="Ônibus ${bus.vehicleId} · saída ${bus.startTime}",isErro=false,mapsRouteUrl=BusRepository.buildGoogleMapsUrl(bus.lat,bus.lng),statusAproximacao=aproximacao)
+                            uiState=uiState.copy(veiculoMaisProximo=bus,distanciaAtePonto=if(metros>=1000) "%.1f km".format(metros/1000) else "${metros.toInt()} m",tempoEstimado=tempo,status="Ônibus ${bus.vehicleId} · saída ${bus.startTime}",isErro=false,mapsRouteUrl=BusRepository.buildGoogleMapsUrl(bus.lat,bus.lng),statusAproximacao=aproximacao,
+                                metrosRestantes=pos?.restante,gpsValidoAte=agora.plusSeconds(121-RastreamentoCorreto.idadeGps(bus.positionTime,agora)!!),
+                                mapaAcompanhamento=TileMapa(viagem.detalhes.shape,viagem.detalhes.stops,RastreamentoCorreto.Coordenada(bus.lat,bus.lng)))
                         }
                     }
                 } catch(e: CancellationException) { throw e }
@@ -193,7 +201,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    private fun semPrevisao(texto: String) { uiState=uiState.copy(veiculoMaisProximo=null,distanciaAtePonto="--",tempoEstimado="--",mapsRouteUrl=null,status=texto,statusAproximacao=StatusAproximacao.ANALISANDO) }
+    private fun semPrevisao(texto: String) { uiState=uiState.copy(veiculoMaisProximo=null,distanciaAtePonto="--",tempoEstimado="--",mapsRouteUrl=null,status=texto,statusAproximacao=StatusAproximacao.ANALISANDO,metrosRestantes=null,gpsValidoAte=null,
+        mapaAcompanhamento=uiState.mapaAcompanhamento?.copy(onibus=null)) }
     fun abrirMeuPonto(config: TileConfig, resultado: TileResultado?) {
         val atual=resultado?.atual(Instant.now())
         selecionarLinha(config.linha)

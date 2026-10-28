@@ -16,10 +16,14 @@ object MeuPontoMapaRenderer {
     }
     fun desenhar(canvas: Canvas,config: TileConfig,result: TileResultado?,width: Float,height: Float,aproximar: Boolean=false,agora: Instant=Instant.now()) {
         val atual=result?.atual(agora)
-        val caminho=runCatching { RastreamentoCorreto.decodificar(atual?.mapa?.shape.orEmpty()) }.getOrDefault(emptyList())
-        val pontos=atual?.mapa?.pontos.orEmpty().map { Coordenada(it.lat,it.lng) }
+        val mapa=atual?.mapa?.copy(onibus=atual?.takeIf { it.estado==TileEstado.CHEGADA }?.mapa?.onibus)
+        desenharMapa(canvas,config,mapa,width,height,aproximar)
+    }
+    fun desenharMapa(canvas: Canvas,config: TileConfig,mapa: TileMapa?,width: Float,height: Float,aproximar: Boolean=false) {
+        val caminho=runCatching { RastreamentoCorreto.decodificar(mapa?.shape.orEmpty()) }.getOrDefault(emptyList())
+        val pontos=mapa?.pontos.orEmpty().map { Coordenada(it.lat,it.lng) }
         val selecionado=Coordenada(config.ponto.lat,config.ponto.lng)
-        val bus=atual?.takeIf { it.estado==TileEstado.CHEGADA }?.mapa?.onibus
+        val bus=mapa?.onibus
         val escala=cos(Math.toRadians(selecionado.lat))
         val enquadrar=if(aproximar) listOfNotNull(selecionado,bus) else caminho+pontos+listOfNotNull(selecionado,bus)
         val minX=enquadrar.minOf { it.lng*escala }; val maxX=enquadrar.maxOf { it.lng*escala }
@@ -29,7 +33,8 @@ object MeuPontoMapaRenderer {
         val zoom=min((width-2*pad)/max(maxX-minX,160.0/111320),(height-2*pad)/max(maxY-minY,160.0/111320))
         fun pixel(p: Coordenada)=PointF((width/2+(p.lng*escala-centroX)*zoom).toFloat(),(height/2-(p.lat-centroY)*zoom).toFloat())
         val paint=Paint(Paint.ANTI_ALIAS_FLAG)
-        canvas.save(); canvas.clipRect(0f,0f,width,height); canvas.drawColor(Color.BLACK)
+        canvas.save(); canvas.clipRect(0f,0f,width,height)
+        paint.color=Color.BLACK; canvas.drawRect(0f,0f,width,height,paint)
         val path=Path(); caminho.forEachIndexed { i,p -> val xy=pixel(p); if(i==0) path.moveTo(xy.x,xy.y) else path.lineTo(xy.x,xy.y) }
         paint.color=Color.rgb(150,150,150); paint.style=Paint.Style.STROKE; paint.strokeWidth=2.5f*s; paint.strokeJoin=Paint.Join.ROUND
         canvas.drawPath(path,paint); paint.style=Paint.Style.FILL; paint.color=Color.rgb(163,193,207)

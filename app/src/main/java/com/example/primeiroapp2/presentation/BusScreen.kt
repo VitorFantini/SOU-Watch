@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.SpanStyle
@@ -33,11 +34,11 @@ import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 
-@Composable fun ListaRelogio(content: ScalingLazyListScope.() -> Unit) {
+@Composable fun ListaRelogio(espacoSuperior: Dp=28.dp, content: ScalingLazyListScope.() -> Unit) {
     val scroll=rememberScalingLazyListState(initialCenterItemIndex=0)
     Scaffold(positionIndicator={ PositionIndicator(scalingLazyListState=scroll) }) {
         ScalingLazyColumn(state=scroll,autoCentering=null,anchorType=ScalingLazyListAnchorType.ItemStart,modifier=Modifier.fillMaxSize().background(Color.Black),
-            contentPadding=PaddingValues(horizontal=18.dp,vertical=28.dp),
+            contentPadding=PaddingValues(start=18.dp,end=18.dp,top=espacoSuperior,bottom=28.dp),
             horizontalAlignment=Alignment.CenterHorizontally,content=content)
     }
 }
@@ -125,29 +126,7 @@ import java.time.format.DateTimeFormatter
             if(s.isErro && !s.carregandoPontos) item { Acao("Tentar novamente") { viewModel.tentarNovamente() } }
             item { Acao("Voltar") { viewModel.voltar() } }
         }
-        else -> ListaRelogio {
-            item { Legenda("Ponto ${s.pontoSelecionado.sequencia} · Linha ${s.linhaSelecionada.numero}",TextoPrincipal) }
-            item { Legenda(s.pontoSelecionado.nome) }
-            item { Legenda(s.status) }
-            if(s.veiculoMaisProximo!=null) {
-                val texto=when(s.statusAproximacao) {
-                    StatusAproximacao.CHEGANDO -> "Em direção ao ponto (GPS)"
-                    StatusAproximacao.APOS_PONTO -> "Após o ponto (estimado)"
-                    StatusAproximacao.PASSOU -> "Passagem detectada (GPS)"
-                    StatusAproximacao.ANTES_PONTO -> "Antes do ponto (estimado)"
-                    else -> "Posição no trajeto incerta"
-                }
-                item { Legenda(texto,TextoPrincipal) }
-                item { Text(s.distanciaAtePonto,color=Color.White,fontSize=28.sp) }
-                item { Legenda(s.tempoEstimado) }
-                if(s.mapsRouteUrl!=null) item { Acao("Abrir no Maps") {
-                    try { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(s.mapsRouteUrl))) }
-                    catch(e: Exception) { Toast.makeText(context,"Nenhum aplicativo disponível para abrir o mapa",Toast.LENGTH_LONG).show() }
-                } }
-            }
-            item { Acao("Voltar aos pontos") { viewModel.voltar() } }
-            item { Acao("Encerrar") { viewModel.resetar() } }
-        }
+        else -> TelaAcompanhamento(s,onVoltar={viewModel.voltar()},onEncerrar={viewModel.resetar()})
     }
 }
 @OptIn(ExperimentalFoundationApi::class)

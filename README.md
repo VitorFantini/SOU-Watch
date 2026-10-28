@@ -2,7 +2,7 @@
 
 **Horários, pontos e acompanhamento de ônibus de São Carlos no seu smartwatch Wear OS.**
 
-Projeto de TCC de Vitor Fantini. A versão atual é **1.4.7** (`versionCode 12`). O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
+Projeto de TCC de Vitor Fantini. A versão atual dos fontes é **1.4.8** (`versionCode 13`). O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
 
 > Projeto acadêmico independente. O SOU Watch não é o aplicativo oficial SOU. Os horários e as posições dependem dos dados disponibilizados pela operadora; os minutos exibidos são estimativas calculadas pelo projeto.
 
@@ -15,15 +15,20 @@ Projeto de TCC de Vitor Fantini. A versão atual é **1.4.7** (`versionCode 12`)
   <img src="docs/imagens/horarios.png" width="220" alt="Horários com caixa verde e ícone claro para ônibus localizado">
   <img src="docs/imagens/pontos.png" width="220" alt="Lista de pontos com estimativas em verde após o nome">
 </p>
+<p align="center">
+  <img src="docs/imagens/acompanhamento-1.4.8.png" width="220" alt="Tela 1.4.8: ponto amarelo, ônibus verde e estado Está chegando">
+  <img src="docs/imagens/mapa-acompanhamento-1.4.8.png" width="220" alt="Mapa esquemático do acompanhamento com ponto e ônibus">
+</p>
 
-*Capturas do emulador durante o desenvolvimento da interface presente na 1.4.7. Ônibus, horários e estimativas nas imagens são exemplos das consultas registradas, não dados atuais.*
+*Capturas do emulador. As telas de acompanhamento da 1.4.8 usam posições simuladas sobre um trajeto registrado para conferir o visual. As demais imagens mostram consultas anteriores; nenhuma imagem representa dados atuais.*
 
 - **Linhas e sentidos:** escolha a linha, o sentido e uma saída confirmada para o dia, usando o horário do relógio.
 - **Ônibus localizado:** horários com GPS recente recebem caixa verde e ícone de ônibus em verde-claro.
 - **Minutos na lista de pontos:** o nome da parada recebe `~XX min` em verde apenas se ela estiver adiante do ônibus no trajeto. Pontos já passados, GPS vencido e posições inconclusivas ficam sem essa estimativa.
-- **Acompanhamento de um ponto:** consulte distância em metros ou quilômetros, tempo estimado e indicação de antes/depois do ponto. A primeira posição após a parada não é tratada como prova de uma passagem observada.
+- **Acompanhamento de um ponto:** título amarelo, identificação do ônibus verde, distância em metros ou quilômetros e tempo estimado. Os estados são **Já passou** (vermelho), **Está chegando** (verde forte, até 600 m pelo trajeto) e **Ainda não passou** (verde claro). Posição incerta ou GPS desatualizado geram mensagem neutra. A tolerância de passagem é de 80 m; uma primeira posição após a parada não comprova passagem observada.
 - **Favoritos:** segure uma parada para favoritar. Pontos com nomes iguais são identificados separadamente por linha, sentido e identidade da parada.
-- **Tile Meu ponto:** salve uma parada, acompanhe a próxima previsão elegível e abra um mapa esquemático com rota, ponto e ônibus quando há GPS válido.
+- **Mapas esquemáticos:** o acompanhamento e o Tile compartilham o desenho local do trajeto, com ponto amarelo e ônibus verde. No acompanhamento, toque no mapa para alternar a aproximação e o trajeto completo. O marcador e os valores do ônibus são ocultados ao expirar o GPS.
+- **Tile Meu ponto:** salve uma parada, acompanhe a próxima previsão elegível e abra o mapa ampliado.
 - **Interface para relógio:** fundo preto, botões escuros, marca em amarelo, textos claros e indicador de rolagem.
 
 ### Linhas disponíveis
@@ -53,7 +58,7 @@ A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medi
 - Interface verificada no emulador Galaxy Watch 7 de 480 × 480. Isso não garante teste em todos os modelos.
 - Aplicativo instalado diretamente no relógio; não há app complementar de celular neste projeto.
 
-O arquivo instalável desta versão é **`SouWatch-1.4.7.apk`**. Baixe o APK em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Também é possível gerar o APK pelos fontes, conforme a próxima seção.
+O APK da última versão publicada é **`SouWatch-1.4.7.apk`**, disponível em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Os fontes atuais da **1.4.8** podem ser compilados conforme a próxima seção; o arquivo gerado pode ser renomeado para `SouWatch-1.4.8.apk`. O guia de instalação ao final usa a 1.4.7 como exemplo e também se aplica ao APK novo.
 
 O APK preparado para testes usa a variante **debug**, assinada com a chave de desenvolvimento deste computador. A chave privada não faz parte do repositório. Compilações em outros computadores podem ter assinatura diferente e não permitir atualização sobre uma instalação existente.
 
