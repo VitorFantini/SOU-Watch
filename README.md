@@ -2,13 +2,26 @@
 
 **Horários, pontos e acompanhamento de ônibus de São Carlos no seu smartwatch Wear OS.**
 
-Projeto de TCC de Vitor Fantini. Os fontes estão na **1.5.1** (`versionCode 15`), com ajustes do Tile e idade da posição GPS. A versão pessoal com chave Google é mantida apenas localmente. O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
+Projeto de TCC de Vitor Fantini. Os fontes estão na **1.5.1** (`versionCode 15`), com ajustes do Tile, idade da posição GPS, nova logo vetorizada e abertura atualizada. A versão pessoal com chave Google é mantida apenas localmente. O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
 
 > Projeto acadêmico independente. O SOU Watch não é o aplicativo oficial SOU. Os horários e as posições dependem dos dados disponibilizados pela operadora; os minutos exibidos são estimativas calculadas pelo projeto.
 
 [Baixar APK 1.4.7](https://github.com/VitorFantini/SOU-Watch/releases/download/v1.4.7/SouWatch-1.4.7.apk) · [Versões e downloads](https://github.com/VitorFantini/SOU-Watch/releases) · [Configurar Google Maps](docs/GOOGLE-MAPS.md)
 
 ## Conheça o aplicativo
+
+### Nova identidade e abertura
+
+O aplicativo aparece como **SOU Watch** na lista do relógio. A abertura usa a logo vetorizada inteira, centralizada em um círculo amarelo sobre fundo quase preto, com uma transição de saída de 250 ms.
+
+<p align="center">
+  <img src="docs/imagens/icone-sou-watch.png" width="220" alt="Lista de aplicativos do Wear OS com o novo ícone e o nome SOU Watch">
+  <img src="docs/imagens/abertura-sou-watch.png" width="220" alt="Abertura do SOU Watch com a logo SOU Transportes centralizada em círculo amarelo">
+</p>
+
+*Capturas enviadas durante a validação no emulador. [Logo em SVG](docs/identidade/sou-logo.svg).*
+
+### Consultas e acompanhamento
 
 <p align="center">
   <img src="docs/imagens/inicio.png" width="220" alt="Início do SOU Watch: seleção de linha e Meu ponto">
@@ -60,6 +73,8 @@ A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medi
 - Aplicativo instalado diretamente no relógio; não há app complementar de celular neste projeto.
 
 O APK da última versão publicada é **`SouWatch-1.4.7.apk`**, disponível em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Os fontes atuais estão na **1.5.1**, com APK pessoal 1.5.1 instalado no Galaxy Watch 7. Esse APK contém uma chave pessoal e não é distribuído neste repositório. Para gerar um APK público sem chave, use `-PpublicBuild=true`. O guia de instalação ao final usa a 1.4.7 como exemplo e também se aplica ao APK novo.
+
+Também foi gerado um APK público da 1.5.1 com a nova identidade e abertura, sem chaves do Google. Esse arquivo ainda não foi anexado a uma Release; o download publicado acima continua sendo o da 1.4.7. Sem chave própria, o app utiliza o mapa local.
 
 O APK preparado para testes usa a variante **debug**, assinada com a chave de desenvolvimento deste computador. A chave privada não faz parte do repositório. Compilações em outros computadores podem ter assinatura diferente e não permitir atualização sobre uma instalação existente.
 
