@@ -8,6 +8,7 @@ import androidx.wear.protolayout.*
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import com.google.common.util.concurrent.ListenableFuture
 import com.example.primeiroapp2.presentation.MainActivity
+import androidx.wear.protolayout.expression.DynamicBuilders
 import com.example.primeiroapp2.presentation.maps.*
 import kotlinx.coroutines.*
 import java.time.Instant
@@ -77,7 +78,7 @@ class MeuPontoTileService : TileService() {
     private fun prepararRecursos(config: TileConfig?,result: TileResultado?,agora: Instant): String {
         if(config==null) return "mapa-vazio"
         mapaGoogle?.takeIf { it.assinatura==RecursosGoogleTile.assinatura(config,result) }?.let { googleNestaRenderizacao=true;return it.versao }
-        val hash=MessageDigest.getInstance("SHA-256").digest(Gson().toJson(listOf("maps-1.5-local",config,result)).toByteArray()).joinToString("") { "%02x".format(it) }
+        val hash=MessageDigest.getInstance("SHA-256").digest(Gson().toJson(listOf("maps-1.5.1-local",config,result)).toByteArray()).joinToString("") { "%02x".format(it) }
         val version="mapa-$hash"; val folder=File(cacheDir,"mapas-tile").apply { mkdirs() }
         for((id,r) in listOf("mapa" to result,"mapa-sem-gps" to result?.copy(estado=TileEstado.ANTIGO,mapa=result.mapa?.copy(onibus=null)))) {
             val file=File(folder,"$version-$id.png")
@@ -92,26 +93,48 @@ class MeuPontoTileService : TileService() {
         return ActionBuilders.LaunchAction.Builder().setAndroidActivity(activity.build()).build()
     }
     private fun text(value: String,size: Float,color: Int=cinza,lines: Int=1)=LayoutElementBuilders.Text.Builder().setText(value).setMaxLines(lines).setMultilineAlignment(LayoutElementBuilders.TEXT_ALIGN_CENTER).setFontStyle(LayoutElementBuilders.FontStyle.Builder().setSize(DimensionBuilders.sp(size)).setColor(ColorBuilders.argb(color)).build()).build()
+    private fun textoLimitado(value: String,size: Float,color: Int=cinza,lines: Int=1,width: Float=152f)=LayoutElementBuilders.Box.Builder()
+        .setWidth(DimensionBuilders.dp(width)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
+        .addContent(text(value,size,color,lines)).build()
+    private fun idadeGpsTexto(gpsEm: Long): LayoutElementBuilders.Box {
+        val segundos=DynamicBuilders.DynamicInstant.withSecondsPrecision(Instant.ofEpochSecond(gpsEm))
+            .durationUntil(DynamicBuilders.DynamicInstant.platformTimeWithSecondsPrecision()).toIntSeconds()
+        val idade=DynamicBuilders.DynamicString.constant("Posição há ").concat(segundos.format()).concat(DynamicBuilders.DynamicString.constant(" s"))
+        val dinamico=DynamicBuilders.DynamicString.onCondition(segundos.lte(120)).use(idade).elseUse("GPS desatualizado")
+        // Hosts antigos recebem um horário absoluto, para não congelar uma idade falsa.
+        val fallback="GPS às ${DateTimeFormatter.ofPattern("HH:mm:ss").withZone(RastreamentoCorreto.fuso).format(Instant.ofEpochSecond(gpsEm))}"
+        val texto=LayoutElementBuilders.Text.Builder()
+            .setText(TypeBuilders.StringProp.Builder(fallback).setDynamicValue(dinamico).build())
+            .setLayoutConstraintsForDynamicText(TypeBuilders.StringLayoutConstraint.Builder("GPS desatualizado")
+                .setAlignment(LayoutElementBuilders.TEXT_ALIGN_CENTER).build())
+            .setMaxLines(1).setFontStyle(LayoutElementBuilders.FontStyle.Builder().setSize(DimensionBuilders.sp(8f)).setColor(ColorBuilders.argb(cinza)).build()).build()
+        return LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.dp(152f))
+            .setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).addContent(texto).build()
+    }
     private fun spacer(height: Float)=LayoutElementBuilders.Spacer.Builder().setHeight(DimensionBuilders.dp(height)).build()
-    private fun button(label: String,id: String,action: ActionBuilders.Action,width: Float=82f)=LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.dp(width)).setHeight(DimensionBuilders.dp(32f)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).setModifiers(ModifiersBuilders.Modifiers.Builder().setClickable(ModifiersBuilders.Clickable.Builder().setId(id).setOnClick(action).build()).setBackground(ModifiersBuilders.Background.Builder().setColor(ColorBuilders.argb(0xFF171717.toInt())).setCorner(ModifiersBuilders.Corner.Builder().setRadius(DimensionBuilders.dp(15f)).build()).build()).build()).addContent(text(label,11f,principal)).build()
+    private fun button(label: String,id: String,action: ActionBuilders.Action,width: Float=82f)=LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.dp(width)).setHeight(DimensionBuilders.dp(28f)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).setModifiers(ModifiersBuilders.Modifiers.Builder().setClickable(ModifiersBuilders.Clickable.Builder().setId(id).setOnClick(action).build()).setBackground(ModifiersBuilders.Background.Builder().setColor(ColorBuilders.argb(0xFF171717.toInt())).setCorner(ModifiersBuilders.Corner.Builder().setRadius(DimensionBuilders.dp(15f)).build()).build()).build()).addContent(text(label,11f,principal)).build()
     private fun layout(config: TileConfig?,result: TileResultado?,agora: Instant): LayoutElementBuilders.Layout {
         val column=LayoutElementBuilders.Column.Builder().setWidth(DimensionBuilders.dp(184f)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER)
         if(config==null) {
             column.addContent(text("SOU WATCH · MEU PONTO",11f,marca)).addContent(spacer(12f)).addContent(text("Escolha seu ponto",21f,-1,2)).addContent(spacer(8f)).addContent(text("Salve linha, sentido e parada",11f,cinza,2)).addContent(spacer(12f)).addContent(button("Configurar","configurar",launch(MeuPontoSetupActivity::class.java),135f))
         } else {
             val chegada=result?.estado==TileEstado.CHEGADA
-            column.addContent(text("LINHA ${config.linha.numero} · ${if(config.sentido==0) "IDA" else "VOLTA"}",11f,principal)).addContent(text("P${config.ponto.sequencia} · ${config.ponto.nome}",10f,cinza,2)).addContent(spacer(2f))
-                .addContent(text(result?.titulo() ?: "Atualizando…",if(chegada) 24f else 19f,if(chegada) 0xFF69E88C.toInt() else if(result?.estado==TileEstado.PROGRAMADO) principal else cinza))
+            column.addContent(textoLimitado("LINHA ${config.linha.numero} · ${if(config.sentido==0) "IDA" else "VOLTA"}",10f,principal,width=112f)).addContent(textoLimitado("P${config.ponto.sequencia} · ${config.ponto.nome}",9f,cinza,2)).addContent(spacer(2f))
+                .addContent(text(result?.titulo() ?: "Atualizando…",if(chegada) 22f else 17f,if(chegada) 0xFF69E88C.toInt() else if(result?.estado==TileEstado.PROGRAMADO) principal else cinza))
             val detalhe=when(result?.estado) { TileEstado.CHEGADA -> "${result.metros?.let { if(it>=1000) "%.1f km".format(it/1000) else "${it.toInt()} m" } ?: ""} · ônibus ${result.veiculoId}"; TileEstado.PROGRAMADO -> "Saída do terminal · chegada sem GPS"; else -> result?.mensagem ?: "Consultando a operadora" }
-            column.addContent(text(detalhe,10f,cinza,2)).addContent(spacer(3f))
+            column.addContent(textoLimitado(detalhe,9f,cinza,2)).addContent(spacer(3f))
             val formato=DateTimeFormatter.ofPattern("HH:mm:ss").withZone(RastreamentoCorreto.fuso)
-            val horario=if(MeuPontoAtualizador.carregando) "Atualizando…" else if(chegada && result?.gpsEm!=null) "GPS às ${formato.format(Instant.ofEpochSecond(result.gpsEm))} · estimativa" else result?.let { "Consulta às ${formato.format(Instant.ofEpochSecond(it.consultadoEm))}" } ?: "Aguardando atualização"
-            column.addContent(text(horario,9f)).addContent(spacer(3f))
-            column.addContent(LayoutElementBuilders.Image.Builder().setResourceId(if(result?.estado==TileEstado.ANTIGO) "mapa-sem-gps" else "mapa").setWidth(DimensionBuilders.dp(168f)).setHeight(DimensionBuilders.dp(64f)).setModifiers(ModifiersBuilders.Modifiers.Builder().setSemantics(ModifiersBuilders.Semantics.Builder().setContentDescription("Abrir mapa do ponto; amarelo é seu ponto e verde é ônibus com GPS recente").build()).setClickable(ModifiersBuilders.Clickable.Builder().setId("mapa").setOnClick(launch(MeuPontoMapaActivity::class.java)).build()).build()).build())
-                .addContent(text(if(googleNestaRenderizacao) "Google Maps · toque para ampliar" else "Mapa local · toque para ampliar",8f)).addContent(spacer(3f))
+            val horario=if(MeuPontoAtualizador.carregando) "Atualizando…" else if(chegada && result?.gpsEm!=null) "GPS ${formato.format(Instant.ofEpochSecond(result.gpsEm))} · estimado" else result?.let { "Consulta às ${formato.format(Instant.ofEpochSecond(it.consultadoEm))}" } ?: "Aguardando atualização"
+            if(chegada && result?.gpsEm!=null) column.addContent(idadeGpsTexto(result.gpsEm))
+            else column.addContent(textoLimitado(if(result?.estado==TileEstado.ANTIGO && result.gpsEm!=null) "GPS desatualizado · atualize" else horario,8f))
+            column.addContent(spacer(3f))
+            column.addContent(LayoutElementBuilders.Image.Builder().setResourceId(if(result?.estado==TileEstado.ANTIGO) "mapa-sem-gps" else "mapa").setWidth(DimensionBuilders.dp(147f)).setHeight(DimensionBuilders.dp(56f)).setModifiers(ModifiersBuilders.Modifiers.Builder().setSemantics(ModifiersBuilders.Semantics.Builder().setContentDescription("Abrir mapa do ponto; amarelo é seu ponto e verde é ônibus com GPS recente").build()).setClickable(ModifiersBuilders.Clickable.Builder().setId("mapa").setOnClick(launch(MeuPontoMapaActivity::class.java)).build()).build()).build())
+                .addContent(text(if(googleNestaRenderizacao) "Toque no mapa para ampliar" else "Mapa local · toque para ampliar",8f)).addContent(spacer(3f))
             column.addContent(LayoutElementBuilders.Row.Builder().setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).addContent(button("Atualizar","atualizar",ActionBuilders.LoadAction.Builder().build())).addContent(LayoutElementBuilders.Spacer.Builder().setWidth(DimensionBuilders.dp(6f)).build()).addContent(button("Abrir app","abrir",launch(MainActivity::class.java,true))).build())
-                .addContent(spacer(4f)).addContent(LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.dp(160f)).setHeight(DimensionBuilders.dp(32f)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).setModifiers(ModifiersBuilders.Modifiers.Builder().setClickable(ModifiersBuilders.Clickable.Builder().setId("trocar").setOnClick(launch(MeuPontoSetupActivity::class.java)).build()).build()).addContent(text("Trocar ponto",10f,principal)).build())
+                .addContent(spacer(2f)).addContent(LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.dp(124f)).setHeight(DimensionBuilders.dp(22f)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).setModifiers(ModifiersBuilders.Modifiers.Builder().setClickable(ModifiersBuilders.Clickable.Builder().setId("trocar").setOnClick(launch(MeuPontoSetupActivity::class.java)).build()).build()).addContent(text("Trocar ponto",10f,principal)).build())
         }
-        return LayoutElementBuilders.Layout.Builder().setRoot(LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.expand()).setHeight(DimensionBuilders.expand()).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).addContent(column.build()).build()).build()
+        return LayoutElementBuilders.Layout.Builder().setRoot(LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.expand()).setHeight(DimensionBuilders.expand()).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER)
+            .setModifiers(ModifiersBuilders.Modifiers.Builder().setBackground(ModifiersBuilders.Background.Builder().setColor(ColorBuilders.argb(0xFF000000.toInt())).build()).build())
+            .addContent(column.build()).build()).build()
     }
 }

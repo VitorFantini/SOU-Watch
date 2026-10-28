@@ -49,7 +49,16 @@ class AcompanhamentoVisualTest {
             mapaAcompanhamento=TileMapa(detalhes.shape,detalhes.stops,coordenada),mapsRouteUrl="geo:0,0?q=${bus.lat},${bus.lng}")
     }
     private fun capturar(nome: String): android.graphics.Bitmap {
-        val bitmap=inst.uiAutomation.takeScreenshot()
+        inst.waitForIdleSync()
+        var bitmap=inst.uiAutomation.takeScreenshot()
+        fun temConteudo(): Boolean {
+            if(bitmap==null) return false
+            var pixels=0
+            for(y in 0 until bitmap.height step 8) for(x in 0 until bitmap.width step 8) if(bitmap.getPixel(x,y) and 0xFFFFFF!=0) pixels++
+            return pixels>10
+        }
+        // A captura pode coincidir com um frame preto durante a transição de Activity.
+        repeat(5) { if(!temConteudo()) { bitmap?.recycle();SystemClock.sleep(250);bitmap=inst.uiAutomation.takeScreenshot() } }
         assertNotNull(bitmap)
         val folder=File(inst.targetContext.getExternalFilesDir(null),"preview-acompanhamento").apply { mkdirs() }
         File(folder,"$nome.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) }
@@ -65,6 +74,8 @@ class AcompanhamentoVisualTest {
         val apenas=InstrumentationRegistry.getArguments().getString("cenario")
         for((nome,restante,cor) in cenarios.filter { apenas==null || it.first==apenas }) {
             val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+            inst.runOnMainSync { activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            inst.uiAutomation.executeShellCommand("input keyevent 224").close()
             try {
                 val state=cenario(restante)
                 inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=false) } } }
@@ -78,6 +89,8 @@ class AcompanhamentoVisualTest {
             } finally { inst.runOnMainSync { activity.finish() } }
         }
         val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+            inst.runOnMainSync { activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            inst.uiAutomation.executeShellCommand("input keyevent 224").close()
         try {
             val state=cenario(500.0).copy(gpsValidoAte=Instant.now().plusSeconds(2))
             inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=false) } } }
@@ -91,6 +104,8 @@ class AcompanhamentoVisualTest {
     /** Google real com posição simulada; captura o preview para conferir o enquadramento. */
     @Test fun previewGoogleTrajetoCompleto() {
         val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+            inst.runOnMainSync { activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            inst.uiAutomation.executeShellCommand("input keyevent 224").close()
         val state=cenario(2000.0)
         inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=true) } } }
         inst.waitForIdleSync()
@@ -101,5 +116,30 @@ class AcompanhamentoVisualTest {
         SystemClock.sleep(700)
         capturar("google-trajeto-completo").recycle()
         // Deixa a tela disponível para a inspeção manual após o teste.
+    }
+    @Test fun idadeGpsAvancaNaTelaSemNovaPosicao() {
+        val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+            inst.runOnMainSync { activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            inst.uiAutomation.executeShellCommand("input keyevent 224").close()
+        try {
+            val original=cenario(500.0)
+            val gps=Instant.now().minusSeconds(45).atZone(RastreamentoCorreto.fuso).toLocalTime().withNano(0).toString()
+            val state=original.copy(veiculoMaisProximo=original.veiculoMaisProximo!!.copy(positionTime=gps))
+            inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=false) } } }
+            inst.waitForIdleSync();SystemClock.sleep(500)
+            fun idade(): Int? {
+                fun textos(node: android.view.accessibility.AccessibilityNodeInfo?): String {
+                    if(node==null) return ""
+                    return node.text.toString()+" "+(0 until node.childCount).joinToString(" ") { textos(node.getChild(it)) }
+                }
+                val text=textos(inst.uiAutomation.rootInActiveWindow)
+                return Regex("Posição há (\\d+) s").find(text)?.groupValues?.get(1)?.toInt()
+            }
+            val antes=idade();assertNotNull("Idade do GPS não apareceu",antes)
+            assertTrue(antes!! in 45..55)
+            capturar("idade-gps-45s").recycle()
+            SystemClock.sleep(2200)
+            val depois=idade();assertNotNull(depois);assertTrue("Idade congelou sem nova consulta",depois!!>antes)
+        } finally { inst.runOnMainSync { activity.finish() } }
     }
 }

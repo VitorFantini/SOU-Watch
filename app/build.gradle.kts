@@ -27,8 +27,8 @@ android {
         minSdk = 30
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 14
-        versionName = "1.5"
+        versionCode = 15
+        versionName = "1.5.1"
         resValue("string", "maps_android_api_key", mapsAndroidKey)
         buildConfigField("String", "MAPS_STATIC_API_KEY", quoted(mapsStaticKey))
     }
@@ -60,6 +60,7 @@ dependencies {
     implementation("androidx.wear.protolayout:protolayout:1.2.1")
     implementation("androidx.concurrent:concurrent-futures:1.1.0")
     testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.wear.tiles:tiles-renderer:1.4.1")
     androidTestImplementation("androidx.test:runner:1.5.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
 }

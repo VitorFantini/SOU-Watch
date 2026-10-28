@@ -27,14 +27,18 @@ object ClienteMapaStatic {
             if(exibicao?.expira?.let { agora>=it }==true) { exibicao?.bitmap?.recycle();exibicao=null }
             val chave=MapasConfig.chaveStatic()
             if(chave.isBlank() || mapa==null) return@withLock null
+            val ponto=Coordenada(config.ponto.lat,config.ponto.lng)
+            val viewport=ViewportMapa.enquadrar(listOfNotNull(ponto,mapa.onibus))
             val id="${config.chave}:${mapa.shape}"
-            var base=exibicao?.takeIf { it.id==id && agora<it.expira && !it.bitmap.isRecycled }
+            var base=exibicao?.takeIf { base ->
+                base.id==id && agora<base.expira && !base.bitmap.isRecycled && listOfNotNull(ponto,mapa.onibus).all {
+                    val (x,y)=base.viewport.pixel(it)
+                    x in 24f..(base.viewport.largura-24f) && y in 24f..(base.viewport.altura-32f)
+                }
+            }
             if(base==null) {
                 if(!MapasConfig.reservarStatic(context,agora)) return@withLock null
                 try {
-                    val ponto=Coordenada(config.ponto.lat,config.ponto.lng)
-                    val caminho=runCatching { RastreamentoCorreto.decodificar(mapa.shape.orEmpty()) }.getOrDefault(emptyList())
-                    val viewport=ViewportMapa.enquadrar(caminho+mapa.pontos.map { Coordenada(it.lat,it.lng) }+ponto)
                     val url=HttpUrl.Builder().scheme("https").host("maps.googleapis.com").addPathSegments("maps/api/staticmap")
                         .addQueryParameter("center","${viewport.centro.lat},${viewport.centro.lng}")
                         .addQueryParameter("zoom",viewport.zoom.toString()).addQueryParameter("size","${viewport.largura}x${viewport.altura}")

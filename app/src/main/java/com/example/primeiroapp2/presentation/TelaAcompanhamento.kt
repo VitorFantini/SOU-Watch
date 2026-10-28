@@ -73,6 +73,7 @@ import java.time.Instant
                         append(" · saída ${bus.startTime.orEmpty()}")
                     },color=Color.LightGray,fontSize=10.sp,textAlign=TextAlign.Center,
                         modifier=Modifier.fillMaxWidth().padding(top=5.dp))
+                    PosicaoGpsTexto(horarioGps=bus.positionTime)
                 }
                 Text(if(gpsRecente) indicacao.texto else if(state.veiculoMaisProximo!=null) "GPS desatualizado. Aguardando nova posição." else state.status,
                     color=cor,fontSize=13.sp,fontWeight=FontWeight.Medium,textAlign=TextAlign.Center,

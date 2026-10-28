@@ -76,6 +76,7 @@ class MeuPontoMapaActivity : ComponentActivity() {
                             TileEstado.PROGRAMADO -> com.example.primeiroapp2.presentation.theme.TextoPrincipal
                             else -> Color.LightGray
                         }) }
+                        if(r?.estado==TileEstado.CHEGADA && r.gpsEm!=null) item { PosicaoGpsTexto(gpsEm=Instant.ofEpochSecond(r.gpsEm)) }
                         item { Legenda(if(carregando) "Atualizando…" else r?.mensagem.orEmpty()) }
                         item { Legenda("Amarelo: ponto · Verde: ônibus\nToque no mapa para ampliar") }
                         item { Acao(if(aproximar) "Ver trajeto todo" else "Aproximar ônibus e ponto") { aproximar=!aproximar } }

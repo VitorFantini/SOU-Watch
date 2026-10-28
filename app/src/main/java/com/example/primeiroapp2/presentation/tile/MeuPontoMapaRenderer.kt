@@ -11,7 +11,7 @@ object MeuPontoMapaRenderer {
     fun bitmap(config: TileConfig,result: TileResultado?,width: Int,height: Int,aproximar: Boolean=false,agora: Instant=Instant.now()): Bitmap =
         Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888).also { desenhar(Canvas(it),config,result,width.toFloat(),height.toFloat(),aproximar,agora) }
     fun png(config: TileConfig,result: TileResultado?,agora: Instant): ByteArray {
-        val bitmap=bitmap(config,result,336,128,agora=agora)
+        val bitmap=bitmap(config,result,336,128,aproximar=true,agora=agora)
         return try { ByteArrayOutputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG,100,it); it.toByteArray() } } finally { bitmap.recycle() }
     }
     fun desenhar(canvas: Canvas,config: TileConfig,result: TileResultado?,width: Float,height: Float,aproximar: Boolean=false,agora: Instant=Instant.now()) {

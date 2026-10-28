@@ -52,4 +52,23 @@ class TileRecoveryTest {
             }
         } finally { if(original!=null) { store.salvar(original); if(oldResult!=null) store.registrar(original,oldResult) } else context.getSharedPreferences("meu_ponto_tile",0).edit().clear().commit() }
     }
+    @Test fun tileIncluiIdadeDinamicaBaseadaNoGpsEAlternativaAbsoluta() {
+        val store=MeuPontoStore(context);val original=store.config();val antigo=store.resultado()
+        try {
+            val now=Instant.now();val r=result(now).copy(gpsEm=now.epochSecond-45)
+            store.salvar(config());store.registrar(config(),r)
+            val service=MeuPontoTileService()
+            ContextWrapper::class.java.getDeclaredMethod("attachBaseContext",Context::class.java).apply { isAccessible=true }.invoke(service,context)
+            val tile=MeuPontoTileService::class.java.getDeclaredMethod("renderizar").apply { isAccessible=true }.invoke(service) as TileBuilders.Tile
+            val live=tile.tileTimeline!!.timelineEntries.first { it.validity!=null }
+            val data=live.layout!!.toByteArray().toString(Charsets.UTF_8)
+            assertTrue(data.contains("Posição há "))
+            assertTrue(data.contains("GPS às "))
+            assertTrue(data.contains("GPS desatualizado"))
+            assertEquals(r.validoAte()*1000,live.validity!!.endMillis)
+        } finally {
+            if(original!=null) { store.salvar(original);if(antigo!=null)store.registrar(original,antigo) }
+            else context.getSharedPreferences("meu_ponto_tile",0).edit().clear().commit()
+        }
+    }
 }

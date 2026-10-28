@@ -1,6 +1,6 @@
-# Google Maps — fontes da versão 1.5 em edição
+# Google Maps — versão 1.5.1
 
-O aplicativo usa Maps SDK for Android nas telas (Lite no acompanhamento e interativo na tela ampliada) e Maps Static API para o Tile. Os mapas locais continuam disponíveis quando falta chave ou ocorre falha. Um APK pessoal 1.5 foi instalado no Galaxy Watch 7. O Google Maps real e o enquadramento do trajeto completo foram conferidos no emulador nos pontos 11, 26 e 33, usando posições de ônibus simuladas. A validação de campo no relógio permanece em andamento.
+O aplicativo usa Maps SDK for Android nas telas (Lite no acompanhamento e interativo na tela ampliada) e Maps Static API para o Tile. Os mapas locais continuam disponíveis quando falta chave ou ocorre falha. O APK pessoal 1.5.1 foi instalado no Galaxy Watch 7 e conferido por hash. O Google Maps real e o enquadramento do trajeto completo foram conferidos no emulador nos pontos 11, 26 e 33, usando posições de ônibus simuladas. A validação de campo no relógio permanece em andamento.
 
 ## Configuração pessoal
 
@@ -35,7 +35,7 @@ Manter a chave fora do Git não a torna secreta dentro de uma compilação pesso
 - A tela ampliada permite gestos, mostra o percurso e mantém o mesmo veículo da saída escolhida; no contexto do Tile, segue os resultados do Meu ponto.
 - Google Maps que não termina de carregar em 15 segundos dá lugar ao desenho local.
 - O GPS vencido remove o ônibus, preservando o fundo e o ponto. Uma imagem de ruas não é prova de GPS válido.
-- O Tile pede uma imagem base de ruas e desenha o veículo pela projeção Web Mercator da própria imagem. A versão sem GPS não contém o ônibus.
+- O Tile enquadra ônibus e ponto, pede uma imagem base de ruas e desenha o veículo pela projeção Web Mercator da própria imagem. A versão sem GPS não contém o ônibus.
 - Logos e atribuições da imagem Google são preservados. O desenho do ônibus evita a faixa de atribuição inferior.
 - Imagens Google não são gravadas no cache PNG persistente do mapa local. Há somente dados transitórios necessários à entrega da imagem atual do Tile.
 - Os testes visuais locais usam o provedor local; o teste específico `previewGoogleTrajetoCompleto` usa Google Maps real com posições simuladas e exige uma chave pessoal válida.

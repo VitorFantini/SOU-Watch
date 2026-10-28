@@ -2,7 +2,7 @@
 
 **Horários, pontos e acompanhamento de ônibus de São Carlos no seu smartwatch Wear OS.**
 
-Projeto de TCC de Vitor Fantini. Os fontes estão na **1.5 em modo de edição** (`versionCode 14`); um APK pessoal da **1.5** foi instalado no Galaxy Watch 7 para testes. O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
+Projeto de TCC de Vitor Fantini. Os fontes estão na **1.5.1** (`versionCode 15`), com ajustes do Tile e idade da posição GPS. A versão pessoal com chave Google é mantida apenas localmente. O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
 
 > Projeto acadêmico independente. O SOU Watch não é o aplicativo oficial SOU. Os horários e as posições dependem dos dados disponibilizados pela operadora; os minutos exibidos são estimativas calculadas pelo projeto.
 
@@ -28,7 +28,8 @@ Projeto de TCC de Vitor Fantini. Os fontes estão na **1.5 em modo de edição**
 - **Acompanhamento de um ponto:** título amarelo, identificação do ônibus verde, distância em metros ou quilômetros e tempo estimado. Os estados são **Já passou** (vermelho), **Está chegando** (verde forte, até 600 m pelo trajeto) e **Ainda não passou** (verde claro). Posição incerta ou GPS desatualizado geram mensagem neutra. A tolerância de passagem é de 80 m; uma primeira posição após a parada não comprova passagem observada.
 - **Favoritos:** segure uma parada para favoritar. Pontos com nomes iguais são identificados separadamente por linha, sentido e identidade da parada.
 - **Mapas:** Google Maps opcional com chave própria; sem configuração ou em falhas, permanece o mapa local. O preview enquadra o trajeto completo da linha, com ponto amarelo e ônibus verde. Toque para ampliar e movimentar o mapa; o botão Aproximar permite focar o trecho entre ônibus e ponto. O GPS vencido oculta o ônibus e suas estimativas.
-- **Tile Meu ponto:** salve uma parada, acompanhe a próxima previsão elegível e abra o mapa ampliado.
+- **Tile Meu ponto:** salve uma parada, acompanhe a próxima previsão elegível e abra o mapa ampliado. O mapa do Tile enquadra ônibus e ponto com margem, enquanto o preview do acompanhamento mostra o trajeto completo. Configurações incompletas voltam à tela de configuração.
+- **Idade do GPS:** o acompanhamento e o Tile mostram “Posição há XX s”, separada dos minutos de chegada. O texto acompanha o tempo local sem aumentar consultas à operadora. Posições acima de 120 segundos são identificadas como desatualizadas. Hosts antigos do Tile mantêm o horário absoluto do GPS como alternativa.
 - **Interface para relógio:** fundo preto, botões escuros, marca em amarelo, textos claros e indicador de rolagem.
 
 ### Linhas disponíveis
@@ -47,7 +48,7 @@ O app associa a consulta à viagem, sentido, horário e veículo selecionados. C
 
 Esses minutos não incorporam um modelo de trânsito, semáforos ou tempo de embarque. GPS com mais de **120 segundos**, projeção ambígua ou veículo fora do traçado não devem produzir minutos verdes na lista. Uma saída programada no Tile representa o horário de saída do terminal, não uma chegada confirmada ao ponto.
 
-As telas de consulta são atualizadas a cada **20 segundos enquanto o app está visível**. A lista usa uma consulta de veículo por ciclo para calcular as previsões das paradas, reutilizando as projeções do trajeto. O Tile reutiliza consultas por pelo menos 20 segundos e expira resultados antigos. Na 1.5 em edição, as telas passam a usar Google Maps quando há configuração válida e voltam ao desenho local em falhas. Os Tiles usam imagens da Maps Static API com limitação de tentativas. Veja o [guia de configuração](docs/GOOGLE-MAPS.md).
+As telas de consulta são atualizadas a cada **20 segundos enquanto o app está visível**. A lista usa uma consulta de veículo por ciclo para calcular as previsões das paradas, reutilizando as projeções do trajeto. O Tile reutiliza consultas por pelo menos 20 segundos e expira resultados antigos. Na 1.5.1, as telas passam a usar Google Maps quando há configuração válida e voltam ao desenho local em falhas. Os Tiles usam imagens da Maps Static API com limitação de tentativas. Veja o [guia de configuração](docs/GOOGLE-MAPS.md).
 
 A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medições no relógio físico.
 
@@ -58,7 +59,7 @@ A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medi
 - Interface verificada no emulador Galaxy Watch 7 de 480 × 480. Isso não garante teste em todos os modelos.
 - Aplicativo instalado diretamente no relógio; não há app complementar de celular neste projeto.
 
-O APK da última versão publicada é **`SouWatch-1.4.7.apk`**, disponível em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Os fontes atuais estão na **1.5 em edição**, com APK pessoal de teste instalado no Galaxy Watch 7. Esse APK contém uma chave pessoal e não é distribuído neste repositório. Para gerar um APK público sem chave, use `-PpublicBuild=true`. O guia de instalação ao final usa a 1.4.7 como exemplo e também se aplica ao APK novo.
+O APK da última versão publicada é **`SouWatch-1.4.7.apk`**, disponível em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Os fontes atuais estão na **1.5.1**, com APK pessoal 1.5.1 instalado no Galaxy Watch 7. Esse APK contém uma chave pessoal e não é distribuído neste repositório. Para gerar um APK público sem chave, use `-PpublicBuild=true`. O guia de instalação ao final usa a 1.4.7 como exemplo e também se aplica ao APK novo.
 
 O APK preparado para testes usa a variante **debug**, assinada com a chave de desenvolvimento deste computador. A chave privada não faz parte do repositório. Compilações em outros computadores podem ter assinatura diferente e não permitir atualização sobre uma instalação existente.
 

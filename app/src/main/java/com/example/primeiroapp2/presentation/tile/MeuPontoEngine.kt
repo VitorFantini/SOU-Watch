@@ -3,6 +3,7 @@ package com.example.primeiroapp2.presentation.tile
 import android.content.Context
 import com.example.primeiroapp2.presentation.data.*
 import com.google.gson.Gson
+import com.google.gson.JsonParser
 import kotlinx.coroutines.*
 import java.time.Instant
 import kotlin.math.*
@@ -34,8 +35,31 @@ data class TileResultado(
 class MeuPontoStore(context: Context) {
     private val prefs=context.applicationContext.getSharedPreferences("meu_ponto_tile",Context.MODE_PRIVATE)
     private val gson=Gson()
-    fun config(): TileConfig?=runCatching { gson.fromJson(prefs.getString("config",null),TileConfig::class.java) }.getOrNull()
-    fun resultado(): TileResultado?=runCatching { gson.fromJson(prefs.getString("resultado",null),TileResultado::class.java) }.getOrNull()
+    fun config(): TileConfig?=runCatching {
+        val json=prefs.getString("config",null) ?: return@runCatching null
+        val obj=JsonParser.parseString(json).asJsonObject
+        // O Gson pode preencher campos Kotlin obrigatórios com null ou zero.
+        // Verifica presença antes de aceitar valores primitivos omitidos como defaults.
+        require(obj.has("sentido") && !obj["sentido"].isJsonNull)
+        val ponto=obj.getAsJsonObject("ponto")
+        require(listOf("sequencia","lat","lng","stopId").all { ponto.has(it) && !ponto[it].isJsonNull })
+        gson.fromJson(obj,TileConfig::class.java).also { c ->
+            require(c.linha.id.isNotBlank() && c.linha.numero.isNotBlank() && c.linha.nome.isNotBlank())
+            require(c.sentido in 0..1 && c.ponto.sequencia>0 && c.ponto.nome.isNotBlank())
+            require(c.ponto.stopId?.let { it>0 }==true)
+            require(RastreamentoCorreto.coordenadasValidas(c.ponto.lat,c.ponto.lng))
+        }
+    }.getOrNull()
+    fun resultado(): TileResultado?=runCatching {
+        if(config()==null) return@runCatching null
+        val json=prefs.getString("resultado",null) ?: return@runCatching null
+        val obj=JsonParser.parseString(json).asJsonObject
+        require(listOf("estado","consultadoEm","mensagem").all { obj.has(it) && !obj[it].isJsonNull })
+        gson.fromJson(obj,TileResultado::class.java).also { r ->
+            requireNotNull(r.estado);requireNotNull(r.mensagem)
+            require(r.consultadoEm>0)
+        }
+    }.getOrNull()
     fun salvar(config: TileConfig) { prefs.edit().putString("config",gson.toJson(config)).remove("resultado").remove("tentativa").apply() }
     fun registrar(config: TileConfig,resultado: TileResultado) { if(config().let { it?.chave }==config.chave) prefs.edit().putString("resultado",gson.toJson(resultado)).apply() }
     fun tentativa()=prefs.getLong("tentativa",0L)
