@@ -1,8 +1,24 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     alias(libs.plugins.kotlin.compose)
 }
+val publicBuild = providers.gradleProperty("publicBuild").orNull == "true"
+val mapsProperties = Properties().apply {
+    if (!publicBuild) {
+        val file = rootProject.file("maps.local.properties").takeIf { it.exists() }
+            ?: rootProject.file("recuperacao/google-maps-1.5.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+}
+fun mapsSecret(name: String): String = if (publicBuild) "" else
+    (providers.environmentVariable(name).orNull ?: mapsProperties.getProperty(name, "")).trim()
+val mapsAndroidKey = mapsSecret("MAPS_ANDROID_API_KEY")
+val mapsStaticKey = mapsSecret("MAPS_STATIC_API_KEY").ifBlank { mapsAndroidKey }
+fun quoted(value: String) = "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 android {
     namespace = "com.example.primeiroapp2"
     compileSdk = 34
@@ -11,18 +27,21 @@ android {
         minSdk = 30
         targetSdk = 34
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        versionCode = 13
-        versionName = "1.4.8"
+        versionCode = 14
+        versionName = "1.5"
+        resValue("string", "maps_android_api_key", mapsAndroidKey)
+        buildConfigField("String", "MAPS_STATIC_API_KEY", quoted(mapsStaticKey))
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions { jvmTarget = "1.8" }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
+    implementation("com.google.android.gms:play-services-maps:20.1.0")
     implementation(platform("androidx.compose:compose-bom:2023.08.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")

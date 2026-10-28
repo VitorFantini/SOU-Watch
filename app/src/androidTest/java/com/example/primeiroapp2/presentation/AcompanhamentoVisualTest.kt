@@ -23,7 +23,8 @@ class AcompanhamentoVisualTest {
     private val inst get()=InstrumentationRegistry.getInstrumentation()
     private fun cenario(restante: Double): BusUiState {
         val detalhes=inst.context.assets.open("trajeto-preview.json").bufferedReader().use { Gson().fromJson(it,TripDetails::class.java) }
-        val ponto=RastreamentoCorreto.pontosDoTrajeto(detalhes)[10]
+        val indice=InstrumentationRegistry.getArguments().getString("pontoIndice")?.toIntOrNull() ?: 10
+        val ponto=RastreamentoCorreto.pontosDoTrajeto(detalhes)[indice]
         val caminho=RastreamentoCorreto.decodificar(detalhes.shape!!)
         val alvo=RastreamentoCorreto.projetar(RastreamentoCorreto.Coordenada(ponto.lat,ponto.lng),caminho).progresso-restante
         var percorrido=0.0
@@ -66,7 +67,7 @@ class AcompanhamentoVisualTest {
             val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
             try {
                 val state=cenario(restante)
-                inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {}) } } }
+                inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=false) } } }
                 inst.waitForIdleSync();SystemClock.sleep(900)
                 val topo=capturar(nome)
                 assertTrue("Cor do estado $nome ausente",pixels(topo,cor)>0)
@@ -79,12 +80,26 @@ class AcompanhamentoVisualTest {
         val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
         try {
             val state=cenario(500.0).copy(gpsValidoAte=Instant.now().plusSeconds(2))
-            inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {}) } } }
+            inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=false) } } }
             SystemClock.sleep(3200)
             val expirado=capturar("gps-expirado")
             assertEquals(0,pixels(expirado,0xFF69E88C.toInt()))
             assertEquals(0,pixels(expirado,0xFF00E676.toInt()))
             expirado.recycle()
         } finally { inst.runOnMainSync { activity.finish() } }
+    }
+    /** Google real com posição simulada; captura o preview para conferir o enquadramento. */
+    @Test fun previewGoogleTrajetoCompleto() {
+        val activity=inst.startActivitySync(Intent(inst.targetContext,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
+        val state=cenario(2000.0)
+        inst.runOnMainSync { activity.setContent { Primeiroapp2Theme { TelaAcompanhamento(state,{}, {},permitirGoogle=true) } } }
+        inst.waitForIdleSync()
+        SystemClock.sleep(1500)
+        inst.uiAutomation.executeShellCommand("input swipe 240 390 240 130 500").close()
+        SystemClock.sleep(12000)
+        inst.uiAutomation.executeShellCommand("input swipe 240 360 240 285 450").close()
+        SystemClock.sleep(700)
+        capturar("google-trajeto-completo").recycle()
+        // Deixa a tela disponível para a inspeção manual após o teste.
     }
 }

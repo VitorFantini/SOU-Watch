@@ -17,6 +17,9 @@
         android:supportsRtl="true"
         android:theme="@android:style/Theme.DeviceDefault">
 
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="@string/maps_android_api_key" />
+        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
+
         <uses-library
             android:name="com.google.android.wearable"
             android:required="true" />
@@ -38,6 +41,7 @@
             <intent-filter><action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" /></intent-filter>
             <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/meu_ponto_tile_preview" />
         </service>
+        <activity android:name=".presentation.maps.MapaGoogleActivity" android:exported="false" android:label="Mapa do ponto" />
         <activity android:name=".presentation.tile.MeuPontoSetupActivity" android:exported="true" android:label="Configurar Meu ponto" />
         <activity android:name=".presentation.tile.MeuPontoMapaActivity" android:exported="true" android:label="Mapa do meu ponto" />
         <activity

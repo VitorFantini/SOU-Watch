@@ -1,0 +1,5 @@
+# Copie para maps.local.properties, preencha com sua propria chave e nao versione esse arquivo.
+# Sem chave, o app usa o mapa esquematico local. Nao use Map ID neste prototipo.
+MAPS_ANDROID_API_KEY=
+# Opcional: chave separada para Maps Static API. Vazio reutiliza a chave acima.
+MAPS_STATIC_API_KEY=

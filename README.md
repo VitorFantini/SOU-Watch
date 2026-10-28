@@ -2,11 +2,11 @@
 
 **Horários, pontos e acompanhamento de ônibus de São Carlos no seu smartwatch Wear OS.**
 
-Projeto de TCC de Vitor Fantini. A versão atual dos fontes é **1.4.8** (`versionCode 13`). O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
+Projeto de TCC de Vitor Fantini. Os fontes estão na **1.5 em modo de edição** (`versionCode 14`); um APK pessoal da **1.5** foi instalado no Galaxy Watch 7 para testes. O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
 
 > Projeto acadêmico independente. O SOU Watch não é o aplicativo oficial SOU. Os horários e as posições dependem dos dados disponibilizados pela operadora; os minutos exibidos são estimativas calculadas pelo projeto.
 
-[Baixar APK 1.4.7](https://github.com/VitorFantini/SOU-Watch/releases/download/v1.4.7/SouWatch-1.4.7.apk) · [Versões e downloads](https://github.com/VitorFantini/SOU-Watch/releases)
+[Baixar APK 1.4.7](https://github.com/VitorFantini/SOU-Watch/releases/download/v1.4.7/SouWatch-1.4.7.apk) · [Versões e downloads](https://github.com/VitorFantini/SOU-Watch/releases) · [Configurar Google Maps](docs/GOOGLE-MAPS.md)
 
 ## Conheça o aplicativo
 
@@ -27,7 +27,7 @@ Projeto de TCC de Vitor Fantini. A versão atual dos fontes é **1.4.8** (`versi
 - **Minutos na lista de pontos:** o nome da parada recebe `~XX min` em verde apenas se ela estiver adiante do ônibus no trajeto. Pontos já passados, GPS vencido e posições inconclusivas ficam sem essa estimativa.
 - **Acompanhamento de um ponto:** título amarelo, identificação do ônibus verde, distância em metros ou quilômetros e tempo estimado. Os estados são **Já passou** (vermelho), **Está chegando** (verde forte, até 600 m pelo trajeto) e **Ainda não passou** (verde claro). Posição incerta ou GPS desatualizado geram mensagem neutra. A tolerância de passagem é de 80 m; uma primeira posição após a parada não comprova passagem observada.
 - **Favoritos:** segure uma parada para favoritar. Pontos com nomes iguais são identificados separadamente por linha, sentido e identidade da parada.
-- **Mapas esquemáticos:** o acompanhamento e o Tile compartilham o desenho local do trajeto, com ponto amarelo e ônibus verde. No acompanhamento, toque no mapa para alternar a aproximação e o trajeto completo. O marcador e os valores do ônibus são ocultados ao expirar o GPS.
+- **Mapas:** Google Maps opcional com chave própria; sem configuração ou em falhas, permanece o mapa local. O preview enquadra o trajeto completo da linha, com ponto amarelo e ônibus verde. Toque para ampliar e movimentar o mapa; o botão Aproximar permite focar o trecho entre ônibus e ponto. O GPS vencido oculta o ônibus e suas estimativas.
 - **Tile Meu ponto:** salve uma parada, acompanhe a próxima previsão elegível e abra o mapa ampliado.
 - **Interface para relógio:** fundo preto, botões escuros, marca em amarelo, textos claros e indicador de rolagem.
 
@@ -47,7 +47,7 @@ O app associa a consulta à viagem, sentido, horário e veículo selecionados. C
 
 Esses minutos não incorporam um modelo de trânsito, semáforos ou tempo de embarque. GPS com mais de **120 segundos**, projeção ambígua ou veículo fora do traçado não devem produzir minutos verdes na lista. Uma saída programada no Tile representa o horário de saída do terminal, não uma chegada confirmada ao ponto.
 
-As telas de consulta são atualizadas a cada **20 segundos enquanto o app está visível**. A lista usa uma consulta de veículo por ciclo para calcular as previsões das paradas, reutilizando as projeções do trajeto. O Tile reutiliza consultas por pelo menos 20 segundos e expira resultados antigos. O mapa é desenhado localmente, sem carregar mapas de fundo pela rede.
+As telas de consulta são atualizadas a cada **20 segundos enquanto o app está visível**. A lista usa uma consulta de veículo por ciclo para calcular as previsões das paradas, reutilizando as projeções do trajeto. O Tile reutiliza consultas por pelo menos 20 segundos e expira resultados antigos. Na 1.5 em edição, as telas passam a usar Google Maps quando há configuração válida e voltam ao desenho local em falhas. Os Tiles usam imagens da Maps Static API com limitação de tentativas. Veja o [guia de configuração](docs/GOOGLE-MAPS.md).
 
 A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medições no relógio físico.
 
@@ -58,7 +58,7 @@ A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medi
 - Interface verificada no emulador Galaxy Watch 7 de 480 × 480. Isso não garante teste em todos os modelos.
 - Aplicativo instalado diretamente no relógio; não há app complementar de celular neste projeto.
 
-O APK da última versão publicada é **`SouWatch-1.4.7.apk`**, disponível em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Os fontes atuais da **1.4.8** podem ser compilados conforme a próxima seção; o arquivo gerado pode ser renomeado para `SouWatch-1.4.8.apk`. O guia de instalação ao final usa a 1.4.7 como exemplo e também se aplica ao APK novo.
+O APK da última versão publicada é **`SouWatch-1.4.7.apk`**, disponível em [Releases](https://github.com/VitorFantini/SOU-Watch/releases/tag/v1.4.7). Os fontes atuais estão na **1.5 em edição**, com APK pessoal de teste instalado no Galaxy Watch 7. Esse APK contém uma chave pessoal e não é distribuído neste repositório. Para gerar um APK público sem chave, use `-PpublicBuild=true`. O guia de instalação ao final usa a 1.4.7 como exemplo e também se aplica ao APK novo.
 
 O APK preparado para testes usa a variante **debug**, assinada com a chave de desenvolvimento deste computador. A chave privada não faz parte do repositório. Compilações em outros computadores podem ter assinatura diferente e não permitir atualização sobre uma instalação existente.
 
@@ -69,16 +69,16 @@ Use Android Studio, **JDK 21**, Android SDK Platform **34** e Android SDK Build 
 No PowerShell, a partir da raiz do projeto:
 
 ```powershell
-.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
+.\gradlew.bat compileDebugKotlin compileDebugAndroidTestKotlin testDebugUnitTest lintDebug -PpublicBuild=true
 ```
 
-O APK será gerado em:
+Para gerar um APK público sem chave, execute `assembleDebug -PpublicBuild=true`. A saída será:
 
 ```text
 app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Os testes unitários cobrem calendário, vínculo de partida e veículo, validade do GPS, projeção no trajeto, passagem, favoritos e estimativas por parada. Com um emulador Wear OS de testes conectado, também é possível executar:
+Os testes unitários cobrem calendário, vínculo de partida e veículo, validade do GPS, projeção no trajeto, passagem, favoritos e estimativas por parada. Com um emulador Wear OS conectado, execute os testes Android:
 
 ```powershell
 .\gradlew.bat connectedDebugAndroidTest

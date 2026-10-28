@@ -20,6 +20,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import com.example.primeiroapp2.presentation.*
+import com.example.primeiroapp2.presentation.maps.*
 import kotlinx.coroutines.*
 import java.time.Instant
 
@@ -68,14 +69,15 @@ class MeuPontoMapaActivity : ComponentActivity() {
                     } else {
                         item { Legenda("Ponto ${c.ponto.sequencia} · Linha ${c.linha.numero}") }
                         item { Legenda(c.ponto.nome) }
-                        item { Canvas(Modifier.fillMaxWidth().height(120.dp)) { MeuPontoMapaRenderer.desenhar(drawContext.canvas.nativeCanvas,c,r,size.width,size.height,aproximar,agora) } }
+                        item { MapaComAlternativa(c,r?.mapa?.let { if(r.estado==TileEstado.CHEGADA) it else it.copy(onibus=null) },Modifier.fillMaxWidth().height(130.dp),aproximar=aproximar,
+                            onAbrir={ abrirMapaGoogle(this@MeuPontoMapaActivity,PedidoMapa(c,r?.mapa?.let { if(r.estado==TileEstado.CHEGADA) it else it.copy(onibus=null) },r?.validoAte()?.times(1000))) }) }
                         item { Legenda(r?.titulo() ?: "Aguardando atualização",when(r?.estado) {
                             TileEstado.CHEGADA -> Color(0xFF69E88C)
                             TileEstado.PROGRAMADO -> com.example.primeiroapp2.presentation.theme.TextoPrincipal
                             else -> Color.LightGray
                         }) }
                         item { Legenda(if(carregando) "Atualizando…" else r?.mensagem.orEmpty()) }
-                        item { Legenda("Cinza: trajeto · Amarelo: ponto\nVerde: ônibus com GPS recente") }
+                        item { Legenda("Amarelo: ponto · Verde: ônibus\nToque no mapa para ampliar") }
                         item { Acao(if(aproximar) "Ver trajeto todo" else "Aproximar ônibus e ponto") { aproximar=!aproximar } }
                         item { Acao("Atualizar") { MeuPontoAtualizador.atualizar(this@MeuPontoMapaActivity) } }
                     }

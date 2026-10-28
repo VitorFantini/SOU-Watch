@@ -29,17 +29,17 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.wear.compose.material.Text
 import com.example.primeiroapp2.presentation.theme.Amarelo
 import com.example.primeiroapp2.presentation.tile.*
+import com.example.primeiroapp2.presentation.maps.*
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.Instant
 
-@Composable fun TelaAcompanhamento(state: BusUiState,onVoltar: ()->Unit,onEncerrar: ()->Unit) {
+@Composable fun TelaAcompanhamento(state: BusUiState,onVoltar: ()->Unit,onEncerrar: ()->Unit,permitirGoogle: Boolean=true) {
     val ponto=state.pontoSelecionado ?: return
     val linha=state.linhaSelecionada ?: return
     val context=LocalContext.current
     val lifecycle=LocalLifecycleOwner.current.lifecycle
     var agora by remember { mutableStateOf(Instant.now()) }
-    var aproximar by remember(ponto.stopId,ponto.sequencia) { mutableStateOf(true) }
     LaunchedEffect(state.gpsValidoAte,lifecycle) {
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             agora=Instant.now()
@@ -86,12 +86,9 @@ import java.time.Instant
         if(mapa!=null) {
             item {
                 Column(horizontalAlignment=Alignment.CenterHorizontally) {
-                    Canvas(Modifier.fillMaxWidth().height(92.dp).clipToBounds()
-                        .semantics { contentDescription="Mapa esquemático: amarelo é o ponto, verde é o ônibus com GPS recente" }
-                        .clickable(role=Role.Button,onClickLabel=if(aproximar) "Ver trajeto completo" else "Aproximar ônibus e ponto") { aproximar=!aproximar }) {
-                        MeuPontoMapaRenderer.desenharMapa(drawContext.canvas.nativeCanvas,config,mapa,size.width,size.height,aproximar)
-                    }
-                    Text(if(aproximar) "Toque no mapa para ver o trajeto todo" else "Toque no mapa para aproximar",color=Color.Gray,fontSize=9.sp,textAlign=TextAlign.Center)
+                    MapaComAlternativa(config,mapa,Modifier.fillMaxWidth().aspectRatio(1f),aproximar=false,permitirGoogle=permitirGoogle,
+                        onAbrir={ abrirMapaGoogle(context,PedidoMapa(config,mapa,state.gpsValidoAte?.toEpochMilli(),state.horarioSelecionado,state.veiculoMaisProximo?.vehicleId)) })
+                    Text("Toque no mapa para ampliar",color=Color.Gray,fontSize=9.sp,textAlign=TextAlign.Center)
                     Text("Amarelo: ponto · Verde: ônibus",color=Color.LightGray,fontSize=9.sp,textAlign=TextAlign.Center)
                 }
             }

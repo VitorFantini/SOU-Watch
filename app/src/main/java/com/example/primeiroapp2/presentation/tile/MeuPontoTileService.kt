@@ -8,6 +8,7 @@ import androidx.wear.protolayout.*
 import androidx.concurrent.futures.CallbackToFutureAdapter
 import com.google.common.util.concurrent.ListenableFuture
 import com.example.primeiroapp2.presentation.MainActivity
+import com.example.primeiroapp2.presentation.maps.*
 import kotlinx.coroutines.*
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -17,6 +18,8 @@ import java.security.MessageDigest
 import com.google.gson.Gson
 
 class MeuPontoTileService : TileService() {
+    private var googleNestaRenderizacao=false
+    private var mapaGoogle: RecursosGoogleTile.Recursos?=null
     private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
     private val principal=0xFFE8E8E8.toInt(); private val marca=0xFFFFC928.toInt(); private val cinza=0xFFADBACB.toInt()
     private fun <T> pronto(value: T): ListenableFuture<T> = CallbackToFutureAdapter.getFuture { it.set(value); "SouWatch" }
@@ -25,6 +28,15 @@ class MeuPontoTileService : TileService() {
             try {
                 if(requestParams.currentState.lastClickableId=="atualizar") MeuPontoAtualizador.atualizar(this@MeuPontoTileService)
                 MeuPontoAtualizador.aguardar()
+                mapaGoogle=null
+                val store=MeuPontoStore(this@MeuPontoTileService)
+                val config=store.config();val agora=Instant.now();val resultado=store.resultado()?.atual(agora)
+                if(config!=null) {
+                    val mapa=resultado?.mapa?.let { if(resultado.estado==TileEstado.CHEGADA) it else it.copy(onibus=null) }
+                    val imagem=ClienteMapaStatic.imagem(this@MeuPontoTileService,config,mapa,agora)
+                    val atual=store.resultado()?.atual(Instant.now())
+                    if(imagem!=null && atual==resultado) mapaGoogle=RecursosGoogleTile.registrar(RecursosGoogleTile.assinatura(config,resultado),imagem)
+                }
                 future.set(renderizar())
             } catch(e: Exception) { future.setException(e) }
         }
@@ -33,6 +45,7 @@ class MeuPontoTileService : TileService() {
     }
     private fun renderizar(): TileBuilders.Tile {
         val store=MeuPontoStore(this); val config=store.config(); val agora=Instant.now(); val snapshot=store.resultado()?.atual(agora)
+        googleNestaRenderizacao=false
         val version=prepararRecursos(config,snapshot,agora)
         val timeline=TimelineBuilders.Timeline.Builder()
         if(config!=null && snapshot!=null && snapshot.estado!=TileEstado.ANTIGO) {
@@ -45,10 +58,16 @@ class MeuPontoTileService : TileService() {
     override fun onTileResourcesRequest(requestParams: RequestBuilders.ResourcesRequest): ListenableFuture<ResourceBuilders.Resources> {
         val version=requestParams.version
         val builder=ResourceBuilders.Resources.Builder().setVersion(version)
-        if(version.matches(Regex("mapa-[a-f0-9]{64}"))) {
+        val google=RecursosGoogleTile.obter(version)
+        if(google!=null) {
+            for((id,bytes) in listOf("mapa" to google.png,"mapa-sem-gps" to google.semGps)) {
+                builder.addIdToImageMapping(id,ResourceBuilders.ImageResource.Builder().setInlineResource(ResourceBuilders.InlineImageResource.Builder()
+                    .setData(bytes).setWidthPx(336).setHeightPx(128).build()).build())
+            }
+        } else if(version.matches(Regex("mapa-[a-f0-9]{64}"))) {
             for(id in listOf("mapa","mapa-sem-gps")) {
                 val file=File(cacheDir,"mapas-tile/$version-$id.png")
-                if(file.exists()) builder.addIdToImageMapping(id,ResourceBuilders.ImageResource.Builder().setInlineResource(ResourceBuilders.InlineImageResource.Builder().setData(file.readBytes()).setWidthPx(336).setHeightPx(112).build()).build())
+                if(file.exists()) builder.addIdToImageMapping(id,ResourceBuilders.ImageResource.Builder().setInlineResource(ResourceBuilders.InlineImageResource.Builder().setData(file.readBytes()).setWidthPx(336).setHeightPx(128).build()).build())
             }
         }
         return pronto(builder.build())
@@ -57,7 +76,8 @@ class MeuPontoTileService : TileService() {
     override fun onDestroy() { scope.cancel(); super.onDestroy() }
     private fun prepararRecursos(config: TileConfig?,result: TileResultado?,agora: Instant): String {
         if(config==null) return "mapa-vazio"
-        val hash=MessageDigest.getInstance("SHA-256").digest(Gson().toJson(listOf("yellow-2",config,result)).toByteArray()).joinToString("") { "%02x".format(it) }
+        mapaGoogle?.takeIf { it.assinatura==RecursosGoogleTile.assinatura(config,result) }?.let { googleNestaRenderizacao=true;return it.versao }
+        val hash=MessageDigest.getInstance("SHA-256").digest(Gson().toJson(listOf("maps-1.5-local",config,result)).toByteArray()).joinToString("") { "%02x".format(it) }
         val version="mapa-$hash"; val folder=File(cacheDir,"mapas-tile").apply { mkdirs() }
         for((id,r) in listOf("mapa" to result,"mapa-sem-gps" to result?.copy(estado=TileEstado.ANTIGO,mapa=result.mapa?.copy(onibus=null)))) {
             val file=File(folder,"$version-$id.png")
@@ -87,8 +107,8 @@ class MeuPontoTileService : TileService() {
             val formato=DateTimeFormatter.ofPattern("HH:mm:ss").withZone(RastreamentoCorreto.fuso)
             val horario=if(MeuPontoAtualizador.carregando) "Atualizando…" else if(chegada && result?.gpsEm!=null) "GPS às ${formato.format(Instant.ofEpochSecond(result.gpsEm))} · estimativa" else result?.let { "Consulta às ${formato.format(Instant.ofEpochSecond(it.consultadoEm))}" } ?: "Aguardando atualização"
             column.addContent(text(horario,9f)).addContent(spacer(3f))
-            column.addContent(LayoutElementBuilders.Image.Builder().setResourceId(if(result?.estado==TileEstado.ANTIGO) "mapa-sem-gps" else "mapa").setWidth(DimensionBuilders.dp(168f)).setHeight(DimensionBuilders.dp(40f)).setModifiers(ModifiersBuilders.Modifiers.Builder().setSemantics(ModifiersBuilders.Semantics.Builder().setContentDescription("Abrir mapa: cinza é trajeto, amarelo é seu ponto e verde é ônibus com GPS recente").build()).setClickable(ModifiersBuilders.Clickable.Builder().setId("mapa").setOnClick(launch(MeuPontoMapaActivity::class.java)).build()).build()).build())
-                .addContent(text("Traçado · toque para ampliar",8f)).addContent(spacer(3f))
+            column.addContent(LayoutElementBuilders.Image.Builder().setResourceId(if(result?.estado==TileEstado.ANTIGO) "mapa-sem-gps" else "mapa").setWidth(DimensionBuilders.dp(168f)).setHeight(DimensionBuilders.dp(64f)).setModifiers(ModifiersBuilders.Modifiers.Builder().setSemantics(ModifiersBuilders.Semantics.Builder().setContentDescription("Abrir mapa do ponto; amarelo é seu ponto e verde é ônibus com GPS recente").build()).setClickable(ModifiersBuilders.Clickable.Builder().setId("mapa").setOnClick(launch(MeuPontoMapaActivity::class.java)).build()).build()).build())
+                .addContent(text(if(googleNestaRenderizacao) "Google Maps · toque para ampliar" else "Mapa local · toque para ampliar",8f)).addContent(spacer(3f))
             column.addContent(LayoutElementBuilders.Row.Builder().setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).addContent(button("Atualizar","atualizar",ActionBuilders.LoadAction.Builder().build())).addContent(LayoutElementBuilders.Spacer.Builder().setWidth(DimensionBuilders.dp(6f)).build()).addContent(button("Abrir app","abrir",launch(MainActivity::class.java,true))).build())
                 .addContent(spacer(4f)).addContent(LayoutElementBuilders.Box.Builder().setWidth(DimensionBuilders.dp(160f)).setHeight(DimensionBuilders.dp(32f)).setHorizontalAlignment(LayoutElementBuilders.HORIZONTAL_ALIGN_CENTER).setVerticalAlignment(LayoutElementBuilders.VERTICAL_ALIGN_CENTER).setModifiers(ModifiersBuilders.Modifiers.Builder().setClickable(ModifiersBuilders.Clickable.Builder().setId("trocar").setOnClick(launch(MeuPontoSetupActivity::class.java)).build()).build()).addContent(text("Trocar ponto",10f,principal)).build())
         }

@@ -49,3 +49,6 @@ keystore.properties
 /monitoramento/
 /CHANGELOG.md
 /RECUPERACAO.md
+
+# Chaves pessoais do Google Maps (a amostra pode ser versionada)
+/maps.local.properties
