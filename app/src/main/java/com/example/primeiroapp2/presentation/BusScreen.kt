@@ -1,303 +1,165 @@
 package com.example.primeiroapp2.presentation
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.wear.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsBus
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.primeiroapp2.presentation.data.BusLine
-import com.example.primeiroapp2.presentation.data.BusStop
 import android.content.Intent
 import android.net.Uri
-import android.util.Log
-import androidx.activity.compose.BackHandler // <--- NOVO IMPORT NECESSÁRIO
-import androidx.compose.foundation.clickable
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DirectionsBus
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat.startActivity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.wear.compose.material.*
+import com.example.primeiroapp2.presentation.data.*
+import com.example.primeiroapp2.presentation.tile.*
+import com.example.primeiroapp2.presentation.theme.*
+import kotlinx.coroutines.delay
+import java.time.Instant
+import java.time.format.DateTimeFormatter
 
-@Composable
-fun BusScreen(
-    viewModel: MainViewModel = viewModel()
-) {
-    val state = viewModel.uiState
-
-
-    val successColor = Color(0xFF4CAF50)
-    val regularColor = Color.LightGray
-
-
-    val context = LocalContext.current
-
-    // =================================================================
-    // 1.  BOTÃO VOLTAR DO SISTEMA (BackHandler)
-    // =================================================================
-
-    // Define se o BackHandler deve estar ativo (ativo se NÃO estiver na primeira tela)
-    val isFirstScreen = state.linhaSelecionada == null
-
-    BackHandler(enabled = !isFirstScreen) {
-        // Se a função de voltar do sistema for chamada e NÃO estiver na primeira tela,
-        // chamamos a função voltar do ViewModel para retornar ao estado anterior.
-        viewModel.voltar()
+@Composable fun ListaRelogio(content: ScalingLazyListScope.() -> Unit) {
+    val scroll=rememberScalingLazyListState(initialCenterItemIndex=0)
+    Scaffold(positionIndicator={ PositionIndicator(scalingLazyListState=scroll) }) {
+        ScalingLazyColumn(state=scroll,autoCentering=null,anchorType=ScalingLazyListAnchorType.ItemStart,modifier=Modifier.fillMaxSize().background(Color.Black),
+            contentPadding=PaddingValues(horizontal=18.dp,vertical=28.dp),
+            horizontalAlignment=Alignment.CenterHorizontally,content=content)
     }
-    // =================================================================
-
-    Box(
-        modifier = Modifier.fillMaxSize().background(Color.Black),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            // TELA 1: LINHAS
-            state.linhaSelecionada == null -> {
-                ListaDeLinhas(state.linhasDisponiveis, { viewModel.selecionarLinha(it) })
-            }
-
-            // TELA 1.5: SENTIDO
-            state.sentidoSelecionado == null -> {
-                TelaEscolhaSentido(
-                    { viewModel.selecionarSentido(0) },
-                    { viewModel.selecionarSentido(1) },
-                    { viewModel.voltar() }
-                )
-            }
-
-            // TELA 2: HORÁRIOS
-            state.horarioSelecionado == null -> {
-                if (state.horariosDisponiveis.isEmpty()) {
-                    TelaAviso("Sem horários", "Tente outro sentido")
-                    Button(onClick = { viewModel.voltar() }, modifier = Modifier.align(Alignment.BottomCenter).padding(10.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color.Gray)) { Text("<") }
-                } else {
-                    ListaDeHorarios(state.horariosDisponiveis, state.linhaSelecionada!!, if(state.sentidoSelecionado == 0) "Ida" else "Volta", { viewModel.selecionarHorario(it) }, { viewModel.voltar() })
-                }
-            }
-
-            // TELA 3: PONTOS
-            state.pontoSelecionado == null -> {
-                ListaDePontos(
-                    state.pontosDisponiveis,
-                    state.favoritos,
-                    { viewModel.selecionarPonto(it) },
-                    { viewModel.toggleFavorito(it) },
-                    { viewModel.voltar() }
-                )
-            }
-
-            // TELA 4: RASTREAMENTO
-            else -> {
-
-                // 1. Lógica para abrir o Google Maps
-                val mapsUrl = state.mapsRouteUrl
-                fun openMaps() {
-                    if (mapsUrl != null) {
-                        try {
-                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(mapsUrl))
-                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            startActivity(context, intent, null)
-                        } catch (e: Exception) {
-                            Log.e("MAPS_INTENT", "Falha ao abrir o Maps: ${e.message}")
-                        }
-                    }
-                }
-
-                // 2. Indicador de Progresso Circular
-                CircularProgressIndicator(
-                    progress = if (state.veiculoMaisProximo != null) 1f else 0.5f,
-                    modifier = Modifier.fillMaxSize(),
-                    indicatorColor = if (state.veiculoMaisProximo != null) successColor else Color.Yellow,
-                    trackColor = Color.DarkGray,
-                    strokeWidth = 4.dp
-                )
-
-                // 3. Conteúdo Central (Dados de ETA)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.fillMaxSize().padding(15.dp)
-                ) {
-
-                    // --- NOME DO PONTO (CLICÁVEL) ---
-                    Text(
-                        text = state.pontoSelecionado!!.nome,
-                        modifier = Modifier
-                            .padding(bottom = 5.dp)
-                            .clickable(
-                                enabled = mapsUrl != null
-                            ) {
-                                openMaps()
-                            },
-                        color = if (mapsUrl != null) successColor else regularColor,
-                        fontSize = 10.sp,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1
-                    )
-
-                    Icon(
-                        imageVector = Icons.Default.DirectionsBus,
-                        contentDescription = "Bus",
-                        tint = if (state.veiculoMaisProximo != null) successColor else Color.Gray,
-                        modifier = Modifier.size(24.dp)
-                    )
-
-                    if (state.veiculoMaisProximo != null) {
-                        // DISTÂNCIA (GRANDE)
-                        Text(
-                            text = state.distanciaAtePonto,
-                            color = successColor,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        // TEMPO ESTIMADO
-                        Text(
-                            text = state.tempoEstimado,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Normal
-                        )
-
-                        // BLOCO DE DEBUG DA LOCALIZAÇÃO DO ÔNIBUS
-                        val busLat = state.veiculoMaisProximo!!.lat
-                        val busLng = state.veiculoMaisProximo!!.lng
-
-                        Text(
-                            text = "Lat: ${String.format("%.4f", busLat)}",
-                            fontSize = 8.sp,
-                            color = Color.Gray
-                        )
-                        Text(
-                            text = "Lng: ${String.format("%.4f", busLng)}",
-                            fontSize = 8.sp,
-                            color = Color.Gray
-                        )
-
-                        // Dica visual
-                        if (mapsUrl != null) {
-                            Text(
-                                text = "Toque no ponto para rota",
-                                color = Color.Yellow,
-                                fontSize = 8.sp,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
-
-                    } else {
-                        // Status de Busca
-                        Text(state.status, color = Color.Yellow, fontSize = 12.sp, modifier = Modifier.padding(top=5.dp))
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // BOTÃO ENCERRAR
-                    Button(
-                        onClick = { viewModel.resetar() },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFD32F2F)),
-                        modifier = Modifier.height(35.dp).width(100.dp).clip(RoundedCornerShape(50))
-                    ) {
-                        Text("Encerrar", fontSize = 11.sp)
-                    }
-                }
+}
+@Composable fun Acao(texto: String, destaque: String? = null, corDestaque: Color = TextoPrincipal, onClick: () -> Unit) {
+    Box(modifier=Modifier.fillMaxWidth().heightIn(min=48.dp).clip(RoundedCornerShape(22.dp))
+        .background(Superficie).clickable(onClick=onClick).padding(horizontal=14.dp,vertical=12.dp),contentAlignment=Alignment.Center) {
+        val rotulo=buildAnnotatedString {
+            if(destaque!=null && texto.startsWith(destaque)) {
+                withStyle(SpanStyle(color=corDestaque)) { append(destaque) }
+                append(texto.substring(destaque.length))
+            } else append(texto)
+        }
+        Text(rotulo,color=TextoPrincipal,fontSize=14.sp,textAlign=TextAlign.Center,modifier=Modifier.fillMaxWidth())
+    }
+}
+@Composable fun Legenda(texto: String, cor: Color=Color.LightGray) {
+    Text(texto,color=cor,fontSize=12.sp,textAlign=TextAlign.Center,modifier=Modifier.fillMaxWidth().padding(vertical=3.dp))
+}
+@Composable fun BusScreen(viewModel: MainViewModel=viewModel(),onConfigurarPonto: ((TileConfig)->Unit)?=null) {
+    val s=viewModel.uiState
+    val context=LocalContext.current
+    val lifecyclePrevisoes=LocalLifecycleOwner.current.lifecycle
+    var agoraPrevisoes by remember { mutableStateOf(Instant.now()) }
+    LaunchedEffect(s.previsoesValidasAte,lifecyclePrevisoes) {
+        lifecyclePrevisoes.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            agoraPrevisoes=Instant.now()
+            s.previsoesValidasAte?.let { validade ->
+                delay(java.time.Duration.between(Instant.now(),validade).toMillis().coerceAtLeast(0))
+                agoraPrevisoes=Instant.now()
             }
         }
     }
-}
-
-
-// --- FUNÇÕES AUXILIARES (COMPONENTS) ---
-
-@Composable
-fun TelaEscolhaSentido(onIdaClick: () -> Unit, onVoltaClick: () -> Unit, onVoltar: () -> Unit) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Qual direção?", color = Color.White, fontSize = 16.sp, modifier = Modifier.padding(bottom = 10.dp))
-        Button(onClick = onIdaClick, modifier = Modifier.fillMaxWidth(0.9f), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1976D2))) { Text("IDA (Bairro/UFSCar)") }
-        Spacer(modifier = Modifier.height(8.dp))
-        Button(onClick = onVoltaClick, modifier = Modifier.fillMaxWidth(0.9f), colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFFD32F2F))) { Text("VOLTA (Centro)") }
-        Spacer(modifier = Modifier.height(10.dp))
-        Button(onClick = onVoltar, modifier = Modifier.size(30.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray)) { Text("<") }
-    }
-}
-
-@Composable
-fun TelaAviso(titulo: String, subtitulo: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, modifier = Modifier.fillMaxSize()) {
-        Text(text = titulo, fontSize = 18.sp, color = Color.White)
-        Text(text = subtitulo, color = Color.Gray, fontSize = 12.sp)
-    }
-}
-
-@Composable
-fun ListaDeLinhas(linhas: List<BusLine>, onLinhaClick: (BusLine) -> Unit) {
-    ScalingLazyColumn(modifier = Modifier.fillMaxSize(), anchorType = ScalingLazyListAnchorType.ItemStart) {
-        item { Text("Selecione a Linha", color = Color(0xFFFFC107), fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp)) }
-        items(linhas) { linha ->
-            Button(onClick = { onLinhaClick(linha) }, colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF2D2D2D)), modifier = Modifier.fillMaxWidth().height(50.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(linha.numero, fontSize = 20.sp, color = Color(0xFF2196F3), modifier = Modifier.padding(end = 12.dp))
-                    Text(linha.nome, fontSize = 12.sp, color = Color.White, maxLines = 2)
+    BackHandler(enabled=s.linhaSelecionada!=null) { viewModel.voltar() }
+    when {
+        s.linhaSelecionada==null -> ListaRelogio {
+            item { Legenda(if(onConfigurarPonto!=null) "Configurar Meu ponto" else "SOU WATCH",if(onConfigurarPonto==null) Amarelo else TextoPrincipal) }
+            if(onConfigurarPonto==null) item { Acao("Meu ponto · Tile") { context.startActivity(Intent(context,MeuPontoSetupActivity::class.java)) } }
+            items(s.linhasDisponiveis) { linha -> Acao("${linha.numero} · ${linha.nome}") { viewModel.selecionarLinha(linha) } }
+        }
+        s.sentidoSelecionado==null -> ListaRelogio {
+            item { Legenda("Linha ${s.linhaSelecionada.numero}",Amarelo) }
+            item { Legenda(s.linhaSelecionada.nome,Amarelo) }
+            item { Legenda("Escolha o sentido") }
+            item { Acao("Ida${s.percursos[0]?.let { " · $it" } ?: ""}",destaque="Ida",corDestaque=Color(0xFF8AB4F8)) { viewModel.selecionarSentido(0) } }
+            item { Acao("Volta${s.percursos[1]?.let { " · $it" } ?: ""}",destaque="Volta",corDestaque=Color(0xFF81C995)) { viewModel.selecionarSentido(1) } }
+            item { Acao("Voltar") { viewModel.voltar() } }
+        }
+        s.horarioSelecionado==null -> {
+            var agora by remember { mutableStateOf(Instant.now()) }
+            val lifecycle=LocalLifecycleOwner.current.lifecycle
+            LaunchedEffect(lifecycle) { lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while(true) { agora=Instant.now(); delay(15_000) }
+            } }
+            ListaRelogio {
+                item { Legenda("Linha ${s.linhaSelecionada.numero} · ${if(s.sentidoSelecionado==0) "Ida" else "Volta"}",TextoPrincipal) }
+                item { Legenda("Agora ${agora.atZone(RastreamentoCorreto.fuso).format(DateTimeFormatter.ofPattern("HH:mm"))}") }
+                if(s.isErro || s.horariosDisponiveis.isEmpty()) item { Legenda(s.status) }
+                if(s.isErro && s.horariosDisponiveis.isNotEmpty()) item { Legenda("Lista anterior · consulta indisponível") }
+                if(onConfigurarPonto!=null) item { Legenda("Escolha o percurso. O Tile acompanha as próximas saídas.") }
+                items(s.horariosDisponiveis) { h ->
+                    val c=s.checagensHorarios[h.tripId]
+                    val estado=c?.estadoEm(agora)
+                    val mensagem=if(s.isErro) "Consulta indisponível" else if(estado==EstadoHorario.GPS_ANTIGO) "GPS antigo" else c?.mensagem ?: "Consultando ônibus…"
+                    val localizado=!s.isErro && estado==EstadoHorario.LOCALIZADO
+                    Chip(onClick={viewModel.selecionarHorario(h)},label={Text(h.horaSaida,color=if(localizado) Color(0xFF69E88C) else TextoPrincipal)},
+                        secondaryLabel={Text(mensagem,color=if(localizado) Color(0xFFB0E3BE) else Color.LightGray)},
+                        icon=if(localizado) ({ Icon(Icons.Default.DirectionsBus,contentDescription="Ônibus localizado",tint=Color(0xFF69E88C),modifier=Modifier.size(22.dp)) }) else null,
+                        modifier=Modifier.fillMaxWidth().heightIn(min=56.dp),colors=ChipDefaults.chipColors(backgroundColor=if(localizado) Color(0xFF123020) else Superficie))
                 }
+                if(!s.carregandoHorarios) item { Acao("Atualizar") { viewModel.tentarNovamente() } }
+                item { Acao("Voltar · trocar sentido") { viewModel.voltar() } }
             }
+        }
+        s.pontoSelecionado==null -> ListaRelogio {
+            item { Legenda("Linha ${s.linhaSelecionada.numero} · ${if(s.sentidoSelecionado==0) "Ida" else "Volta"}",TextoPrincipal) }
+            item { Legenda(if(onConfigurarPonto!=null) "Toque para escolher seu ponto" else "Toque para acompanhar. Segure para favoritar.") }
+            if(s.pontosDisponiveis.isEmpty()) item { Legenda(s.status) }
+            if(onConfigurarPonto==null && s.statusPrevisoes.isNotBlank()) item { Legenda(s.statusPrevisoes) }
+            items(s.pontosDisponiveis) { ponto ->
+                PontoItem(ponto,viewModel.chaveFavorito(ponto) in s.favoritos,
+                    if(onConfigurarPonto==null && s.previsoesValidasAte?.isAfter(agoraPrevisoes)==true) s.minutosPorPonto[ponto.sequencia] else null,
+                    { if(onConfigurarPonto!=null) onConfigurarPonto(TileConfig(s.linhaSelecionada,s.sentidoSelecionado,ponto)) else viewModel.selecionarPonto(ponto) },
+                    { if(onConfigurarPonto==null) viewModel.toggleFavorito(ponto) })
+            }
+            if(s.isErro && !s.carregandoPontos) item { Acao("Tentar novamente") { viewModel.tentarNovamente() } }
+            item { Acao("Voltar") { viewModel.voltar() } }
+        }
+        else -> ListaRelogio {
+            item { Legenda("Ponto ${s.pontoSelecionado.sequencia} · Linha ${s.linhaSelecionada.numero}",TextoPrincipal) }
+            item { Legenda(s.pontoSelecionado.nome) }
+            item { Legenda(s.status) }
+            if(s.veiculoMaisProximo!=null) {
+                val texto=when(s.statusAproximacao) {
+                    StatusAproximacao.CHEGANDO -> "Em direção ao ponto (GPS)"
+                    StatusAproximacao.APOS_PONTO -> "Após o ponto (estimado)"
+                    StatusAproximacao.PASSOU -> "Passagem detectada (GPS)"
+                    StatusAproximacao.ANTES_PONTO -> "Antes do ponto (estimado)"
+                    else -> "Posição no trajeto incerta"
+                }
+                item { Legenda(texto,TextoPrincipal) }
+                item { Text(s.distanciaAtePonto,color=Color.White,fontSize=28.sp) }
+                item { Legenda(s.tempoEstimado) }
+                if(s.mapsRouteUrl!=null) item { Acao("Abrir no Maps") {
+                    try { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(s.mapsRouteUrl))) }
+                    catch(e: Exception) { Toast.makeText(context,"Nenhum aplicativo disponível para abrir o mapa",Toast.LENGTH_LONG).show() }
+                } }
+            }
+            item { Acao("Voltar aos pontos") { viewModel.voltar() } }
+            item { Acao("Encerrar") { viewModel.resetar() } }
         }
     }
 }
-
-@Composable
-fun ListaDeHorarios(horarios: List<BusSchedule>, linha: BusLine, sentido: String, onHorarioClick: (BusSchedule) -> Unit, onVoltar: () -> Unit) {
-    ScalingLazyColumn(modifier = Modifier.fillMaxSize(), anchorType = ScalingLazyListAnchorType.ItemStart) {
-        item {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Button(onClick = onVoltar, modifier = Modifier.size(24.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray)) { Text("<", fontSize = 10.sp) }
-                Text("Linha ${linha.numero} - $sentido", color = Color.Gray, fontSize = 12.sp)
-            }
-        }
-        items(horarios) { horario ->
-            Button(onClick = { onHorarioClick(horario) }, colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF1E1E1E)), modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-                Text(horario.horaSaida, fontSize = 18.sp, color = Color.White)
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalFoundationApi::class)
-@Composable
-fun ListaDePontos(pontos: List<BusStop>, favoritos: Set<String>, onPontoClick: (BusStop) -> Unit, onPontoLongClick: (BusStop) -> Unit, onVoltar: () -> Unit) {
-    ScalingLazyColumn(modifier = Modifier.fillMaxSize(), anchorType = ScalingLazyListAnchorType.ItemStart) {
-        item {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Button(onClick = onVoltar, modifier = Modifier.size(24.dp), colors = ButtonDefaults.buttonColors(backgroundColor = Color.DarkGray)) { Text("<", fontSize = 10.sp) }
-                Text("Segure para fixar", color = Color.Gray, fontSize = 10.sp)
-            }
-        }
-        items(pontos) { ponto ->
-            val isFavorito = favoritos.contains(ponto.nome)
-            Box(
-                modifier = Modifier.fillMaxWidth().height(55.dp).padding(vertical = 2.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(if (isFavorito) Color(0xFF1A237E) else Color(0xFF2D2D2D))
-                    .combinedClickable(onClick = { onPontoClick(ponto) }, onLongClick = { onPontoLongClick(ponto) })
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("${ponto.sequencia}.", color = Color.Gray, fontSize = 10.sp, modifier = Modifier.padding(end = 5.dp))
-                    if (isFavorito) Icon(Icons.Default.PushPin, "Fixo", tint = Color(0xFF2196F3), modifier = Modifier.size(16.dp))
-                    else Icon(Icons.Default.LocationOn, "Ponto", tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(ponto.nome, fontSize = 12.sp, color = if (isFavorito) Color(0xFFBBDEFB) else Color.White, maxLines = 2)
-                }
-            }
-        }
+@Composable private fun PontoItem(ponto: BusStop,favorito: Boolean,minutos: Int?,onClick: ()->Unit,onLongClick: ()->Unit) {
+    Column(modifier=Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Superficie)
+        .combinedClickable(onClick=onClick,onLongClick=onLongClick,onLongClickLabel="Favoritar ou remover favorito")
+        .padding(12.dp).heightIn(min=48.dp)) {
+        Text("Ponto ${ponto.sequencia}${if(favorito) " · Favorito" else ""}",color=TextoPrincipal,fontSize=11.sp)
+        Text(buildAnnotatedString {
+            append(ponto.nome)
+            if(minutos!=null) withStyle(SpanStyle(color=Color(0xFF69E88C))) { append(" · ~$minutos min") }
+        },color=Color.White,fontSize=13.sp)
+        Text("Parada ${ponto.stopId ?: ponto.sequencia}",color=Color.LightGray,fontSize=10.sp)
     }
 }

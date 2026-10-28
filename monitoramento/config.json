@@ -1,0 +1,14 @@
+{
+  "interval_seconds": 60,
+  "request_timeout_seconds": 15,
+  "request_gap_seconds": 1,
+  "timetable_cache_seconds": 1800,
+  "gps_max_age_seconds": 120,
+  "timezone": "America/Sao_Paulo",
+  "routes": {
+    "01": "942455",
+    "06": "942430",
+    "32": "942419"
+  },
+  "app_test_interval_seconds": 21600
+}

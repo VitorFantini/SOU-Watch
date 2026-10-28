@@ -1,38 +1,142 @@
-# 🚌 SOU Watch - Monitoramento de Ônibus (Wear OS)
+# SOU Watch
 
-> **App nativo para Wear OS capaz de rastrear ônibus em tempo real e calcular rotas sem depender do celular.**
+**Horários, pontos e acompanhamento de ônibus de São Carlos no seu smartwatch Wear OS.**
 
-![Platform](https://img.shields.io/badge/Platform-Wear_OS-blue?logo=android)
-![Language](https://img.shields.io/badge/Language-Kotlin-purple?logo=kotlin)
-![Architecture](https://img.shields.io/badge/Architecture-MVVM-green)
+Projeto de TCC de Vitor Fantini. A versão atual é **1.4.7** (`versionCode 12`). O app consulta as linhas **01, 06 e 32**, mostra o veículo associado à saída escolhida e apresenta estimativas para os pontos que ele ainda vai atender.
 
-## 🎯 O Diferencial Técnico
-Este projeto não utiliza APIs públicas documentadas. Todo o acesso aos dados foi construído através de **Engenharia Reversa** do aplicativo oficial de transporte.
+> Projeto acadêmico independente. O SOU Watch não é o aplicativo oficial SOU. Os horários e as posições dependem dos dados disponibilizados pela operadora; os minutos exibidos são estimativas calculadas pelo projeto.
 
-* **🕵️ Engenharia Reversa & Segurança:** Mapeamento de endpoints privados via *Packet Sniffing* e injeção de certificados em ambiente controlado para a **quebra de SSL Pinning**.
-* **🔄 Resiliência de Rede:** Algoritmo de "Caça em Cascata" que alterna entre dados da API, estimativas de tráfego do Google Maps e cálculos matemáticos locais para garantir que o usuário nunca fique sem resposta.
-* **🎨 UI Nativa:** Interface desenvolvida 100% em **Jetpack Compose**, otimizada para legibilidade em telas circulares OLED.
+[O que mudou](CHANGELOG.md) · [Monitoramento](monitoramento/README.md) · [Histórico da recuperação](RECUPERACAO.md) · [Versões e downloads](https://github.com/VitorFantini/SOU-Watch/releases)
 
-## 📱 Funcionalidades
-* 📍 **Rastreamento GPS Real:** Localização exata do veículo na linha.
-* 🗺️ **Navegação Nativa:** Deep Linking direto para o Google Maps do relógio.
-* 📂 **Modo Offline:** Tabelas de horários completas armazenadas localmente.
+## Conheça o aplicativo
 
-## 🛠️ Tech Stack
-* **Linguagem:** Kotlin (Coroutines & Flow)
-* **Interface:** Jetpack Compose for Wear OS
-* **Arquitetura:** MVVM + Clean Architecture
-* **Networking:** Retrofit (com Headers customizados para simulação de cliente oficial)
-* **Maps:** Google Directions API & Intents
+<p align="center">
+  <img src="docs/imagens/inicio.png" width="220" alt="Início do SOU Watch: seleção de linha e Meu ponto">
+  <img src="docs/imagens/horarios.png" width="220" alt="Horários com caixa verde e ícone claro para ônibus localizado">
+  <img src="docs/imagens/pontos.png" width="220" alt="Lista de pontos com estimativas em verde após o nome">
+</p>
 
-## 🚀 Como Rodar
-1.  Clone o repositório.
-2.  Abra no **Android Studio**.
-3.  Crie um arquivo `local.properties` na raiz com sua chave:
-    ```properties
-    MAPS_API_KEY=Chave_Aqui
-    ```
-4.  Execute em um emulador ou dispositivo físico via ADB.
+*Capturas do emulador durante o desenvolvimento da interface presente na 1.4.7. Ônibus, horários e estimativas nas imagens são exemplos das consultas registradas, não dados atuais.*
 
----
-Desenvolvido por **[Vitor Fantini](https://github.com/VitorFantini)** 🧑🏻‍💻
+- **Linhas e sentidos:** escolha a linha, o sentido e uma saída confirmada para o dia, usando o horário do relógio.
+- **Ônibus localizado:** horários com GPS recente recebem caixa verde e ícone de ônibus em verde-claro.
+- **Minutos na lista de pontos:** o nome da parada recebe `~XX min` em verde apenas se ela estiver adiante do ônibus no trajeto. Pontos já passados, GPS vencido e posições inconclusivas ficam sem essa estimativa.
+- **Acompanhamento de um ponto:** consulte distância em metros ou quilômetros, tempo estimado e indicação de antes/depois do ponto. A primeira posição após a parada não é tratada como prova de uma passagem observada.
+- **Favoritos:** segure uma parada para favoritar. Pontos com nomes iguais são identificados separadamente por linha, sentido e identidade da parada.
+- **Tile Meu ponto:** salve uma parada, acompanhe a próxima previsão elegível e abra um mapa esquemático com rota, ponto e ônibus quando há GPS válido.
+- **Interface para relógio:** fundo preto, botões escuros, marca em amarelo, textos claros e indicador de rolagem.
+
+### Linhas disponíveis
+
+| Linha | Percurso de referência |
+|---|---|
+| 01 | Pacaembu × UFSCar Norte |
+| 06 | Cardinalli × Vila São José |
+| 32 | Monte Carlo × Paulistano |
+
+Os percursos específicos e as partidas são consultados na fonte de dados. Uma linha pode ter variações de trajeto ou não ter partidas confirmadas em determinado dia.
+
+## Como as estimativas funcionam
+
+O app associa a consulta à viagem, sentido, horário e veículo selecionados. Calcula a distância ao longo do itinerário e usa uma velocidade de referência de **300 m/min (18 km/h)**, arredondando a estimativa para cima, com mínimo de um minuto.
+
+Esses minutos não incorporam um modelo de trânsito, semáforos ou tempo de embarque. GPS com mais de **120 segundos**, projeção ambígua ou veículo fora do traçado não devem produzir minutos verdes na lista. Uma saída programada no Tile representa o horário de saída do terminal, não uma chegada confirmada ao ponto.
+
+As telas de consulta são atualizadas a cada **20 segundos enquanto o app está visível**. A lista usa uma consulta de veículo por ciclo para calcular as previsões das paradas, reutilizando as projeções do trajeto. O Tile reutiliza consultas por pelo menos 20 segundos e expira resultados antigos. O mapa é desenhado localmente, sem carregar mapas de fundo pela rede.
+
+A autonomia de bateria e a precisão dos minutos em campo ainda precisam de medições no relógio físico.
+
+## Compatibilidade e APK
+
+- Relógio **Wear OS**, com API Android 30 ou superior, conforme o `minSdk` do projeto.
+- Acesso à internet no relógio para consultar horários e veículos.
+- Interface verificada no emulador Galaxy Watch 7 de 480 × 480. Isso não garante teste em todos os modelos.
+- Aplicativo instalado diretamente no relógio; não há app complementar de celular neste projeto.
+
+O arquivo instalável desta versão é **`SouWatch-1.4.7.apk`**. Quando uma versão for publicada no GitHub, os arquivos para baixar ficarão em [Releases](https://github.com/VitorFantini/SOU-Watch/releases). Também é possível gerar o APK pelos fontes, conforme a próxima seção.
+
+O APK preparado para testes usa a variante **debug**, assinada com a chave de desenvolvimento deste computador. A chave privada não faz parte do repositório. Compilações em outros computadores podem ter assinatura diferente e não permitir atualização sobre uma instalação existente.
+
+## Compilar e verificar
+
+Use Android Studio, **JDK 21**, Android SDK Platform **34** e Android SDK Build Tools. O projeto inclui o Gradle Wrapper. Configure o caminho do SDK pelo Android Studio ou por um `local.properties` local, que não deve ser versionado.
+
+No PowerShell, a partir da raiz do projeto:
+
+```powershell
+.\gradlew.bat assembleDebug testDebugUnitTest lintDebug
+```
+
+O APK será gerado em:
+
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+Os testes unitários cobrem calendário, vínculo de partida e veículo, validade do GPS, projeção no trajeto, passagem, favoritos e estimativas por parada. Com um emulador Wear OS de testes conectado, também é possível executar:
+
+```powershell
+.\gradlew.bat connectedDebugAndroidTest
+```
+
+Use um emulador separado para os testes instrumentados: a instalação/limpeza realizada pelo Gradle pode afetar o app e os Tiles configurados nesse dispositivo de testes.
+
+## Organização do projeto
+
+```text
+app/src/main/             Aplicativo Android/Wear OS, interface e Tile
+app/src/test/             Testes unitários
+app/src/androidTest/      Testes Android do Tile
+monitoramento/            Coleta da API e relatórios de validação
+docs/imagens/             Capturas da interface
+CHANGELOG.md              Mudanças registradas por versão
+```
+
+O monitor opcional acompanha as três linhas e registra evidências para o TCC. Precisa de um computador ligado e conectado; ele não é executado dentro do relógio. Consulte o [guia do monitor](monitoramento/README.md) para iniciar, parar e interpretar os resultados.
+
+Backups de recuperação, APKs gerados, respostas brutas, configurações locais e chaves de assinatura ficam fora do controle de versão. O [registro da recuperação](RECUPERACAO.md) documenta a origem da base reconstruída; os arquivos citados nesse registro podem existir apenas no backup local.
+
+## Como instalar no seu smartwatch
+
+### 1. Prepare o computador e o relógio
+
+Baixe e extraia o [Android SDK Platform Tools](https://developer.android.com/tools/releases/platform-tools). Tenha o `SouWatch-1.4.7.apk` no computador. Conecte computador e relógio à mesma rede Wi-Fi, sem isolamento entre dispositivos.
+
+No Galaxy Watch, abra **Configurações → Sobre o relógio → Informações do software** e toque repetidamente em **Versão do software** até habilitar as opções de desenvolvedor. Volte às configurações, abra **Opções do desenvolvedor** e ative **Depuração ADB** e **Depuração sem fio**. Os nomes podem variar conforme a versão do sistema.
+
+### 2. Pareie o computador
+
+Na tela de depuração sem fio do relógio, toque em **Parear novo dispositivo**. Anote o IP e a porta de pareamento. No PowerShell, aberto na pasta `platform-tools`, execute:
+
+```powershell
+.\adb.exe pair IP_DO_RELOGIO:PORTA_DE_PAREAMENTO
+```
+
+Digite o código mostrado no relógio quando solicitado.
+
+### 3. Conecte e instale
+
+Volte à tela principal de **Depuração sem fio** e use o IP e a **porta de conexão** indicados ali. Essa porta pode ser diferente da usada no pareamento.
+
+```powershell
+.\adb.exe connect IP_DO_RELOGIO:PORTA_DE_CONEXAO
+.\adb.exe devices -l
+```
+
+Com o relógio listado como `device`, instale. Substitua o endereço e o caminho abaixo pelos valores reais:
+
+```powershell
+.\adb.exe -s IP_DO_RELOGIO:PORTA_DE_CONEXAO install -r "C:\caminho\SouWatch-1.4.7.apk"
+```
+
+A mensagem `Success` confirma a instalação. Abra **SouWatch** na lista de aplicativos do relógio. O `-r` tenta atualizar preservando os dados, desde que a assinatura seja compatível.
+
+Se aparecer `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, a instalação existente usa outra assinatura. Preserve a versão instalada e seus dados; será necessário um APK assinado com a mesma chave para atualizá-la sem desinstalar. Se aparecer `offline`, `unauthorized` ou falha de conexão, confirme a autorização no relógio e consulte novamente o IP e a porta atuais.
+
+### 4. Configure o Tile Meu ponto
+
+No app, toque em **Meu ponto · Tile**, escolha linha, sentido, percurso e parada. No carrossel de Tiles do relógio, adicione **Meu ponto · SOU Watch**. Use **Atualizar**, **Abrir app** e **Trocar ponto** conforme necessário. O nome Tile pode aparecer como bloco ou widget no sistema.
+
+Ao terminar a instalação, você pode desativar a depuração sem fio nas opções de desenvolvedor. O app continuará usando a conexão normal à internet do relógio.
+
+Referências para conexão e instalação: [Samsung — conectar o Galaxy Watch](https://developer.samsung.com/health/sensor/guide/connect-watch.html), [Android — depuração do Wear OS por Wi-Fi](https://developer.android.com/training/wearables/get-started/debug-wifi) e [Android — comandos ADB](https://developer.android.com/tools/adb).

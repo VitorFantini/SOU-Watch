@@ -6,7 +6,7 @@ data class BusStop(
     val sequencia: Int,
     val nome: String,
     val lat: Double,
-    val lng: Double
+    val lng: Double, val stopId: Long? = null
 )
 
 
@@ -344,14 +344,9 @@ object BusDatabase {
         BusSchedule("v2210", "22:10 ( Monte Carlo )"), BusSchedule("v2305", "23:05 ( Monte Carlo )")
     )
 
-
-    // =========================================================================
-    // MÉTODOS PÚBLICOS
-    // =========================================================================
-
     /**
      * Retorna a lista de BusStops para uma linha e sentido específicos,
-     * considerando a variação "PE" (Parque Ecológico) se aplicável.
+     * considerando ar variação "PE" (Paque Ecológico) se aplicável.
      */
     fun getStopsForLine(lineId: String, sentidoId: Int, horario: String? = null): List<BusStop> {
         return when (lineId) {

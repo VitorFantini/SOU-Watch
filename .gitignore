@@ -13,3 +13,34 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+/recuperacao/
+/app/build/
+
+/monitoramento/saida/
+/monitoramento/.test-tmp/
+**/__pycache__/
+
+/referencia-sou/
+
+# Cache do Kotlin e artefatos de distribuição locais
+/.kotlin/
+/distribuicao/
+/monitoramento/souwatch-monitor.zip
+
+# Preferências locais do Android Studio
+/.idea/.name
+/.idea/markdown.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/codeStyles/
+
+# Credenciais e chaves de assinatura
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+.env.*
+keystore.properties

@@ -6,9 +6,7 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <uses-feature android:name="android.hardware.type.watch" />
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
@@ -34,8 +32,17 @@
             android:name="com.google.android.wearable.standalone"
             android:value="true" />
 
+        <service android:name=".presentation.tile.MeuPontoTileService"
+            android:label="Meu ponto · SOU Watch" android:icon="@mipmap/sou_watch"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER" android:exported="true">
+            <intent-filter><action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" /></intent-filter>
+            <meta-data android:name="androidx.wear.tiles.PREVIEW" android:resource="@drawable/meu_ponto_tile_preview" />
+        </service>
+        <activity android:name=".presentation.tile.MeuPontoSetupActivity" android:exported="true" android:label="Configurar Meu ponto" />
+        <activity android:name=".presentation.tile.MeuPontoMapaActivity" android:exported="true" android:label="Mapa do meu ponto" />
         <activity
             android:name=".presentation.MainActivity"
+            android:launchMode="singleTop"
             android:exported="true"
             android:taskAffinity=""
             android:theme="@style/MainActivityTheme.Starting">
